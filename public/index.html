@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>考研能量站</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  background: linear-gradient(180deg, #fef9f0 0%, #fdf2e9 40%, #fdebd0 100%);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #4a3728;
+  -webkit-tap-highlight-color: transparent;
+}
+.card {
+  background: #fff;
+  border-radius: 20px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.08);
+  padding: 40px 28px;
+  width: 90%;
+  max-width: 400px;
+  text-align: center;
+}
+.card h1 {
+  font-size: 28px;
+  font-weight: 800;
+  margin-bottom: 6px;
+  background: linear-gradient(135deg, #e67e22, #e74c3c);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.card .subtitle {
+  font-size: 14px;
+  color: #999;
+  margin-bottom: 30px;
+}
+
+.room-section {
+  background: #fef9f0;
+  border-radius: 14px;
+  padding: 20px;
+  margin-bottom: 24px;
+}
+.room-section label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #b08050;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.room-input {
+  width: 100%;
+  padding: 14px 16px;
+  border: 2px solid #f0e0d0;
+  border-radius: 12px;
+  font-size: 22px;
+  text-align: center;
+  letter-spacing: 6px;
+  font-weight: 700;
+  color: #4a3728;
+  background: #fff;
+  outline: none;
+  transition: border-color 0.2s;
+  text-transform: uppercase;
+}
+.room-input:focus {
+  border-color: #e67e22;
+}
+.room-input::placeholder {
+  letter-spacing: 2px;
+  font-size: 16px;
+  font-weight: 400;
+  color: #ccc;
+}
+
+.buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.btn {
+  padding: 16px;
+  border: none;
+  border-radius: 14px;
+  font-size: 17px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.btn:active {
+  transform: scale(0.97);
+}
+.btn-student {
+  background: linear-gradient(135deg, #ff9a56, #ff6b6b);
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(255,107,107,0.3);
+}
+.btn-supervisor {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(118,75,162,0.3);
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+.error-msg {
+  color: #e74c3c;
+  font-size: 13px;
+  margin-top: 10px;
+  min-height: 20px;
+}
+.footer {
+  margin-top: 24px;
+  font-size: 12px;
+  color: #bbb;
+}
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>考研能量站</h1>
+  <p class="subtitle">远程督学 · 互相陪伴 · 一起上岸</p>
+
+  <div class="room-section">
+    <label>输入房间号</label>
+    <input type="text" class="room-input" id="roomInput"
+           placeholder="例如 KX123"
+           maxlength="12"
+           autocomplete="off"
+           autocorrect="off"
+           autocapitalize="characters">
+    <div class="error-msg" id="errorMsg"></div>
+  </div>
+
+  <div class="buttons">
+    <button class="btn btn-student" id="btnStudent" disabled>
+      📚 我是学生（需要被监督）
+    </button>
+    <button class="btn btn-supervisor" id="btnSupervisor" disabled>
+      👀 我是监督者
+    </button>
+  </div>
+
+  <div class="footer">
+    输入房间号后选择一个角色进入
+  </div>
+</div>
+
+<script>
+var roomInput = document.getElementById('roomInput');
+var btnStudent = document.getElementById('btnStudent');
+var btnSupervisor = document.getElementById('btnSupervisor');
+var errorMsg = document.getElementById('errorMsg');
+
+function validateRoom(code) {
+  code = code.trim().toUpperCase();
+  if (code.length < 3) return '房间号至少3位';
+  if (!/^[A-Z0-9]+$/.test(code)) return '只能包含字母和数字';
+  return null;
+}
+
+function updateButtons() {
+  var code = roomInput.value.trim();
+  var err = validateRoom(code);
+  if (err && code.length > 0) {
+    errorMsg.textContent = err;
+    btnStudent.disabled = true;
+    btnSupervisor.disabled = true;
+  } else {
+    errorMsg.textContent = '';
+    var valid = code.length >= 3;
+    btnStudent.disabled = !valid;
+    btnSupervisor.disabled = !valid;
+  }
+}
+
+roomInput.addEventListener('input', updateButtons);
+
+roomInput.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    if (!btnStudent.disabled) goStudent();
+  }
+});
+
+// Allow paste anywhere
+roomInput.focus();
+
+// Pre-fill from URL param ?room=XXXX
+var urlParams = new URLSearchParams(location.search);
+var roomParam = urlParams.get('room');
+if (roomParam) {
+  roomInput.value = roomParam.toUpperCase();
+  updateButtons();
+}
+
+function goStudent() {
+  var code = roomInput.value.trim().toUpperCase();
+  if (validateRoom(code)) return;
+  window.location.href = '/student.html?room=' + encodeURIComponent(code);
+}
+
+function goSupervisor() {
+  var code = roomInput.value.trim().toUpperCase();
+  if (validateRoom(code)) return;
+  window.location.href = '/supervisor.html?room=' + encodeURIComponent(code);
+}
+
+btnStudent.addEventListener('click', goStudent);
+btnSupervisor.addEventListener('click', goSupervisor);
+</script>
+</body>
+</html>

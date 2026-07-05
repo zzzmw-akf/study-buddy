@@ -1,0 +1,39 @@
+# Fly.io configuration for Study Buddy Relay
+# Deploy: fly launch (first time) then fly deploy
+
+app = "study-buddy-relay"
+primary_region = "hkg"
+
+[build]
+
+[[vm]]
+  memory = "256mb"
+  cpu_kind = "shared"
+  cpus = 1
+
+[[services]]
+  protocol = "tcp"
+  internal_port = 8080
+
+  [[services.ports]]
+    port = 443
+    handlers = ["tls", "http"]
+    force_https = true
+
+  [[services.ports]]
+    port = 80
+    handlers = ["http"]
+    force_https = true
+
+  # WebSocket requires HTTP upgrade support
+  [services.concurrency]
+    type = "connections"
+    hard_limit = 500
+    soft_limit = 250
+
+[http_service]
+  internal_port = 8081
+  force_https = true
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1

@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>考研能量站 · 监督模式</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  background: linear-gradient(180deg, #f0f4ff 0%, #e8ecf8 40%, #dce2f2 100%);
+  min-height: 100vh;
+  color: #3a3f5c;
+  -webkit-tap-highlight-color: transparent;
+}
+.page {
+  max-width: 500px;
+  margin: 0 auto;
+  padding: 20px 16px 60px;
+}
+
+/* Header */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+.logo {
+  font-size: 22px; font-weight: 800;
+  color: #5b6abf; display: flex; align-items: center; gap: 8px;
+}
+.conn-row {
+  display: flex; gap: 8px; align-items: center;
+}
+.conn-tag {
+  font-size: 11px; padding: 5px 12px; border-radius: 20px;
+  font-weight: 700;
+}
+.conn-tag.online { background: #e8f5e9; color: #2e7d32; }
+.conn-tag.offline { background: #fce4ec; color: #c62828; }
+.conn-tag.watching { background: #e3f2fd; color: #1565c0; }
+.sound-btn {
+  width: 36px; height: 36px; border-radius: 50%;
+  border: 1.5px solid rgba(91,106,191,0.2);
+  background: rgba(255,255,255,0.7); cursor: pointer;
+  font-size: 18px; display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s;
+}
+.sound-btn:active { transform: scale(0.9); }
+.sound-btn.muted { opacity: 0.5; }
+
+/* Room input */
+.room-section {
+  background: rgba(255,255,255,0.7);
+  border-radius: 14px; padding: 14px 16px;
+  margin-bottom: 18px; backdrop-filter: blur(10px);
+  border: 1px solid rgba(91,106,191,0.12);
+}
+.room-section label { font-size: 12px; color: #7a80a0; display: block; margin-bottom: 8px; }
+.room-input-row { display: flex; gap: 8px; }
+.room-input-row input {
+  flex: 1; padding: 12px; border-radius: 10px;
+  border: 1.5px solid rgba(91,106,191,0.2);
+  background: rgba(255,255,255,0.9); font-size: 18px;
+  letter-spacing: 4px; font-weight: 700; text-transform: uppercase;
+  outline: none; color: #3a3f5c; text-align: center;
+}
+.room-input-row input:focus { border-color: #5b6abf; }
+.room-input-row button {
+  background: #5b6abf; color: #fff; border: none;
+  border-radius: 10px; padding: 12px 22px;
+  font-size: 14px; font-weight: 700; cursor: pointer;
+  transition: all 0.2s; white-space: nowrap;
+}
+.room-input-row button:active { transform: scale(0.95); }
+.room-input-row button:disabled { opacity: 0.5; pointer-events: none; }
+
+/* Connecting indicator */
+.connecting-indicator {
+  text-align: center; padding: 16px;
+  color: #7a80a0; font-size: 13px;
+  display: none;
+}
+.connecting-indicator.show { display: block; }
+.connecting-dots::after {
+  content: '';
+  animation: dots 1.5s infinite;
+}
+@keyframes dots {
+  0% { content: ''; }
+  25% { content: '.'; }
+  50% { content: '..'; }
+  75% { content: '...'; }
+}
+
+/* Stats cards */
+.stats-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 12px; margin-bottom: 20px;
+}
+.stat-card {
+  background: rgba(255,255,255,0.8);
+  border-radius: 16px; padding: 16px;
+  text-align: center; border: 1px solid rgba(91,106,191,0.08);
+  transition: all 0.3s;
+}
+.stat-card.alert {
+  border-color: rgba(229,115,115,0.5);
+  background: rgba(255,235,238,0.6);
+  animation: alertPulse 0.8s infinite;
+}
+@keyframes alertPulse {
+  0%, 100% { box-shadow: 0 0 0 rgba(229,115,115,0); }
+  50% { box-shadow: 0 0 30px rgba(229,115,115,0.3); }
+}
+.stat-value {
+  font-size: 36px; font-weight: 900;
+  transition: all 0.3s;
+}
+.stat-value.completed { color: #4caf50; }
+.stat-value.sos { color: #e57373; }
+.stat-label {
+  font-size: 12px; color: #7a80a0; margin-top: 4px;
+}
+
+/* Goals display */
+.goals-section {
+  background: rgba(255,255,255,0.8);
+  border-radius: 16px; padding: 16px;
+  margin-bottom: 18px;
+  border: 1px solid rgba(91,106,191,0.08);
+}
+.goals-title { font-size: 15px; font-weight: 700; margin-bottom: 10px; }
+.goal-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 0; border-bottom: 1px solid rgba(0,0,0,0.04);
+  font-size: 14px;
+}
+.goal-row:last-child { border-bottom: none; }
+.goal-icon { font-size: 18px; flex-shrink: 0; }
+.goal-done { text-decoration: line-through; color: #b0b5cc; }
+
+/* SOS Alert Banner */
+.sos-banner {
+  background: linear-gradient(135deg, #ffcdd2, #ef9a9a);
+  border-radius: 16px; padding: 20px;
+  margin-bottom: 18px; display: none;
+  text-align: center; animation: bannerIn 0.4s ease-out;
+}
+@keyframes bannerIn {
+  0% { transform: scale(0.9); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.sos-banner.active { display: block; }
+.sos-banner-title {
+  font-size: 28px; font-weight: 900; color: #c62828;
+  margin-bottom: 4px;
+}
+.sos-banner-sub {
+  font-size: 14px; color: #b71c1c; margin-bottom: 12px;
+}
+.sos-banner-btn {
+  background: #fff; color: #c62828; border: none;
+  border-radius: 25px; padding: 10px 28px;
+  font-size: 14px; font-weight: 700; cursor: pointer;
+  box-shadow: 0 4px 15px rgba(198,40,40,0.2);
+  transition: all 0.2s;
+}
+.sos-banner-btn:active { transform: scale(0.95); }
+
+/* Encourage */
+.encourage-section {
+  background: rgba(255,255,255,0.8);
+  border-radius: 16px; padding: 16px;
+  margin-bottom: 18px;
+  border: 1px solid rgba(91,106,191,0.08);
+}
+.enc-title { font-size: 15px; font-weight: 700; margin-bottom: 10px; }
+.enc-presets { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.enc-chip {
+  background: rgba(91,106,191,0.08);
+  border: 1px solid rgba(91,106,191,0.15);
+  border-radius: 20px; padding: 8px 16px;
+  font-size: 13px; cursor: pointer; white-space: nowrap;
+  transition: all 0.2s; color: #3a3f5c;
+}
+.enc-chip:hover { background: rgba(91,106,191,0.18); border-color: #5b6abf; }
+.enc-chip:active { transform: scale(0.95); }
+.enc-sent {
+  text-align: center; font-size: 13px; color: #4caf50;
+  padding: 6px; display: none;
+}
+.enc-custom-row {
+  display: flex; gap: 8px; margin-top: 8px;
+}
+.enc-input {
+  flex: 1; padding: 10px 14px; border-radius: 12px;
+  border: 1.5px solid rgba(91,106,191,0.2);
+  background: rgba(255,255,255,0.9); font-size: 14px;
+  outline: none; color: #3a3f5c;
+  transition: border-color 0.2s;
+}
+.enc-input:focus { border-color: #5b6abf; }
+.enc-send-btn {
+  background: #5b6abf; color: #fff; border: none;
+  border-radius: 12px; padding: 10px 20px;
+  font-size: 14px; font-weight: 700; cursor: pointer;
+  transition: all 0.2s; white-space: nowrap;
+}
+.enc-send-btn:active { transform: scale(0.95); }
+.enc-send-btn:disabled { opacity: 0.5; pointer-events: none; }
+.enc-chip.active-chip {
+  background: rgba(91,106,191,0.2); border-color: #5b6abf;
+}
+
+/* Event log */
+.log-section {
+  background: rgba(255,255,255,0.6);
+  border-radius: 16px; padding: 14px;
+  border: 1px solid rgba(91,106,191,0.06);
+}
+.log-title { font-size: 13px; color: #7a80a0; margin-bottom: 8px; }
+.log-item {
+  font-size: 13px; padding: 6px 0; color: #5a6080;
+  border-bottom: 1px solid rgba(0,0,0,0.03);
+  display: flex; gap: 8px;
+}
+.log-time { color: #b0b5cc; font-size: 11px; flex-shrink: 0; }
+
+/* Connection hint */
+.conn-hint {
+  text-align: center;
+  font-size: 12px;
+  color: #b0b5cc;
+  display: none;
+  margin-bottom: 10px;
+}
+.conn-hint.show { display: block; }
+
+/* Timer */
+.timer-section {
+  background: rgba(255,255,255,0.8);
+  border-radius: 16px; padding: 18px;
+  margin-bottom: 18px;
+  border: 1px solid rgba(91,106,191,0.08);
+}
+.timer-section.studying {
+  border-color: rgba(76,175,80,0.4);
+  box-shadow: 0 0 25px rgba(76,175,80,0.1);
+  animation: tGlow 2s infinite;
+}
+@keyframes tGlow {
+  0%, 100% { box-shadow: 0 0 15px rgba(76,175,80,0.06); }
+  50% { box-shadow: 0 0 35px rgba(76,175,80,0.15); }
+}
+.timer-head {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 8px;
+}
+.timer-head-title { font-size: 15px; font-weight: 700; color: #3a3f5c; display: flex; align-items: center; gap: 6px; }
+.timer-status-badge {
+  font-size: 11px; padding: 3px 12px; border-radius: 12px;
+  font-weight: 700;
+}
+.timer-status-badge.studying { background: #e8f5e9; color: #2e7d32; }
+.timer-status-badge.paused { background: #fff3e0; color: #e65100; }
+.timer-status-badge.idle { background: #f5f5f5; color: #9e9e9e; }
+.timer-big {
+  font-size: 48px; font-weight: 900; text-align: center;
+  color: #5b6abf; font-variant-numeric: tabular-nums;
+  letter-spacing: 2px; margin: 8px 0;
+}
+.timer-section.studying .timer-big { color: #2e7d32; }
+.timer-meta {
+  font-size: 12px; color: #7a80a0; text-align: center;
+  margin-bottom: 4px;
+}
+.timer-total-super {
+  font-size: 13px; color: #5b6abf; text-align: center;
+  font-weight: 600; margin-bottom: 12px;
+}
+.timer-sessions-title {
+  font-size: 13px; font-weight: 700; color: #3a3f5c;
+  margin-bottom: 8px;
+}
+.timer-session-item {
+  display: flex; justify-content: space-between;
+  padding: 8px 0; font-size: 13px;
+  border-bottom: 1px solid rgba(0,0,0,0.04);
+  color: #5a6080;
+}
+.timer-session-item:last-child { border-bottom: none; }
+.timer-session-time { color: #7a80a0; font-size: 12px; }
+.timer-session-dur { color: #5b6abf; font-weight: 600; }
+
+/* Responsive */
+@media (max-width: 400px) {
+  .stats-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .stat-value { font-size: 28px; }
+}
+
+/* History */
+.history-section {
+  background: rgba(255,255,255,0.6);
+  border-radius: 16px; padding: 14px;
+  margin-bottom: 18px;
+  border: 1px solid rgba(91,106,191,0.06);
+}
+.history-s-head {
+  display: flex; justify-content: space-between; align-items: center;
+  cursor: pointer;
+}
+.history-s-title { font-size: 14px; font-weight: 700; color: #3a3f5c; display: flex; align-items: center; gap: 6px; }
+.history-s-count { font-size: 12px; color: #b0b5cc; font-weight: 400; }
+.history-s-arrow { font-size: 12px; color: #b0b5cc; transition: transform 0.3s; }
+.history-section.open .history-s-arrow { transform: rotate(180deg); }
+.history-s-list { margin-top: 10px; display: none; max-height: 360px; overflow-y: auto; }
+.history-section.open .history-s-list { display: block; }
+.h-day {
+  background: rgba(255,255,255,0.6); border-radius: 12px;
+  padding: 12px; margin-bottom: 8px;
+  border: 1px solid rgba(91,106,191,0.06);
+  cursor: pointer; transition: all 0.2s;
+}
+.h-day:hover { border-color: rgba(91,106,191,0.2); }
+.h-day:last-child { margin-bottom: 0; }
+.h-day-head {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 6px;
+}
+.h-day-date { font-size: 14px; font-weight: 700; color: #3a3f5c; }
+.h-day-sub { font-size: 11px; color: #b0b5cc; font-weight: 400; margin-left: 4px; }
+.h-day-expand { font-size: 11px; color: #b0b5cc; transition: transform 0.2s; }
+.h-day.open .h-day-expand { transform: rotate(180deg); }
+.h-day-stats { display: flex; gap: 14px; font-size: 12px; color: #7a80a0; }
+.h-day-detail { margin-top: 8px; display: none; border-top: 1px solid rgba(0,0,0,0.04); padding-top: 8px; }
+.h-day.open .h-day-detail { display: block; }
+.h-day-goal { font-size: 12px; padding: 4px 0; color: #5a6080; display: flex; align-items: center; gap: 6px; }
+.h-day-goal-done { text-decoration: line-through; color: #b0b5cc; }
+.h-empty { color: #b0b5cc; font-size: 12px; text-align: center; padding: 10px; }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <!-- Header -->
+  <div class="header">
+    <div class="logo">👀 考研能量站</div>
+    <div class="conn-row">
+      <div class="conn-tag watching" id="meTag" style="display:none">👤 监督者</div>
+      <div class="conn-tag offline" id="studentTag">🔴 离线</div>
+      <button class="sound-btn" id="soundBtn" title="SOS提示音">🔔</button>
+    </div>
+  </div>
+
+  <!-- Room input -->
+  <div class="room-section" id="roomSection">
+    <label>🔑 输入她发给你的监督码</label>
+    <div class="room-input-row">
+      <input type="text" id="roomInput" placeholder="XXXXXX" maxlength="6" autocomplete="off">
+      <button id="joinBtn">连接</button>
+    </div>
+  </div>
+
+  <!-- Connecting -->
+  <div class="connecting-indicator" id="connectingIndicator">
+    ⏳ 正在连接中继服务器<span class="connecting-dots"></span>
+    <br><small style="opacity:0.7">同源直连 · WSS加密 · 任何网络都能连</small>
+  </div>
+
+  <!-- Connection hint -->
+  <div class="conn-hint" id="connHint" style="display:none">
+    💡 云端中继服务器，无论手机用流量还是电脑用宽带，都能稳定连接
+  </div>
+
+  <!-- Dashboard -->
+  <div id="dashboard" style="display:none">
+
+    <!-- SOS Alert -->
+    <div class="sos-banner" id="sosBanner">
+      <div class="sos-banner-title">🆘 她按了 SOS！</div>
+      <div class="sos-banner-sub">她正在经历一段焦虑，正在呼吸调节中…</div>
+      <button class="sos-banner-btn" id="sosSendBtn">💬 发句鼓励给她</button>
+    </div>
+
+    <!-- Timer -->
+    <div class="timer-section" id="timerSection">
+      <div class="timer-head">
+        <span class="timer-head-title">⏱️ 学习计时器</span>
+        <span class="timer-status-badge idle" id="timerBadge">等待中</span>
+      </div>
+      <div class="timer-big" id="timerBig">00:00:00</div>
+      <div class="timer-meta" id="timerMeta">开始时间: --</div>
+      <div class="timer-total-super" id="timerTotalSuper">今日累计: 0分钟</div>
+      <div id="timerSessionsWrap">
+        <div class="timer-sessions-title">📋 今日学习记录</div>
+        <div id="timerSessionsList" style="color:#b0b5cc;font-size:12px;">暂无记录</div>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-value completed" id="statCompleted">—</div>
+        <div class="stat-label">📝 今日完成</div>
+      </div>
+      <div class="stat-card" id="sosCard">
+        <div class="stat-value sos" id="statSOS">0</div>
+        <div class="stat-label">🆘 今日SOS</div>
+      </div>
+    </div>
+
+    <!-- Goals -->
+    <div class="goals-section">
+      <div class="goals-title">📋 她的今日目标</div>
+      <div id="goalDisplay">
+        <div style="color:#b0b5cc;font-size:13px;text-align:center;padding:10px;">等待她的数据…</div>
+      </div>
+    </div>
+
+    <!-- Encourage -->
+    <div class="encourage-section">
+      <div class="enc-title">💬 发送鼓励</div>
+      <div class="enc-presets" id="encPresets">
+        <button class="enc-chip" data-msg="慢慢来，不着急 🌱">慢慢来，不着急 🌱</button>
+        <button class="enc-chip" data-msg="你已经很棒了 💪">你已经很棒了 💪</button>
+        <button class="enc-chip" data-msg="先做完一道题就好 📝">先做完一道题就好 📝</button>
+        <button class="enc-chip" data-msg="我在看着你呢，加油！👀">我在看着你呢，加油！👀</button>
+        <button class="enc-chip" data-msg="今天的努力都在积累 🌟">今天的努力都在积累 🌟</button>
+        <button class="enc-chip" data-msg="累了就歇一会，没关系 💆">累了就歇一会，没关系 💆</button>
+      </div>
+      <div class="enc-custom-row">
+        <input type="text" class="enc-input" id="encInput" placeholder="点击上方预设，或自己写鼓励语…" maxlength="60">
+        <button class="enc-send-btn" id="encSendBtn">📨 发送</button>
+      </div>
+      <div class="enc-sent" id="encSent">✅ 已发送！</div>
+    </div>
+
+    <!-- Log -->
+    <div class="log-section">
+      <div class="log-title">📜 实时动态</div>
+      <div id="logList">
+        <div style="color:#b0b5cc;font-size:12px;">等待连接…</div>
+      </div>
+    </div>
+
+    <!-- History -->
+    <div class="history-section" id="historySection">
+      <div class="history-s-head" id="historySHead">
+        <span class="history-s-title">📅 历史记录 <span class="history-s-count" id="historySCount"></span></span>
+        <span class="history-s-arrow">▼</span>
+      </div>
+      <div class="history-s-list" id="historySList">
+        <div class="h-empty">等待接收数据…</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- WebSocket relay: no external library needed -->
+
+<script>
+(function() {
+const $ = s => document.querySelector(s);
+
+// ---- Sound Engine ----
+let soundEnabled = true;
+let audioCtx = null;
+
+function getAudioCtx() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  // Resume if suspended (browser autoplay policy)
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+  return audioCtx;
+}
+
+function playSOSAlert() {
+  if (!soundEnabled) return;
+  try {
+    const ctx = getAudioCtx();
+    const now = ctx.currentTime;
+
+    // Two-tone alarm: high-low repeated 3 times, like an urgent warning
+    for (let i = 0; i < 3; i++) {
+      const t = now + i * 0.45;
+
+      // High tone (800Hz)
+      const osc1 = ctx.createOscillator();
+      const gain1 = ctx.createGain();
+      osc1.type = 'square';
+      osc1.frequency.setValueAtTime(800, t);
+      gain1.gain.setValueAtTime(0, t);
+      gain1.gain.linearRampToValueAtTime(0.25, t + 0.02);
+      gain1.gain.setValueAtTime(0.25, t + 0.18);
+      gain1.gain.linearRampToValueAtTime(0, t + 0.22);
+      osc1.connect(gain1); gain1.connect(ctx.destination);
+      osc1.start(t); osc1.stop(t + 0.22);
+
+      // Low tone (500Hz)
+      const osc2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      osc2.type = 'square';
+      osc2.frequency.setValueAtTime(500, t + 0.22);
+      gain2.gain.setValueAtTime(0, t + 0.22);
+      gain2.gain.linearRampToValueAtTime(0.25, t + 0.24);
+      gain2.gain.setValueAtTime(0.25, t + 0.39);
+      gain2.gain.linearRampToValueAtTime(0, t + 0.43);
+      osc2.connect(gain2); gain2.connect(ctx.destination);
+      osc2.start(t + 0.22); osc2.stop(t + 0.43);
+    }
+
+    // Final urgency: rising three tones
+    const last = now + 1.35;
+    [600, 800, 1000].forEach((freq, idx) => {
+      const t = last + idx * 0.2;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(freq, t);
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.3, t + 0.02);
+      gain.gain.setValueAtTime(0.3, t + 0.14);
+      gain.gain.linearRampToValueAtTime(0, t + 0.18);
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start(t); osc.stop(t + 0.18);
+    });
+  } catch(e) {
+    // Silently fail if audio not available
+  }
+}
+
+// Sound toggle button
+$('#soundBtn').addEventListener('click', () => {
+  soundEnabled = !soundEnabled;
+  if (soundEnabled) {
+    $('#soundBtn').textContent = '🔔';
+    $('#soundBtn').classList.remove('muted');
+  } else {
+    $('#soundBtn').textContent = '🔕';
+    $('#soundBtn').classList.add('muted');
+  }
+});
+
+// ---- WebSocket Connection ----
+// Same-origin WebSocket — works through any tunnel (ngrok/localtunnel)
+// No hardcoded URL! Uses the same host that served this page.
+var RELAY_URL = (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host;
+var ws = null;
+var wsConnected = false;
+var room = '';
+var lastStatus = null;
+var wsReconnectTimer = null;
+
+function connect() {
+  room = $('#roomInput').value.trim().toUpperCase();
+  if (!room || room.length < 3) {
+    $('#roomInput').placeholder = '请输入6位监督码';
+    return;
+  }
+
+  $('#roomInput').disabled = true;
+  $('#joinBtn').disabled = true;
+  $('#connectingIndicator').classList.add('show');
+
+  if (ws) { try { ws.close(); } catch(e) {} }
+
+  var url = RELAY_URL + '/ws/' + room;
+  ws = new WebSocket(url);
+
+  ws.onopen = function() {
+    console.log('WebSocket connected to room:', room);
+    wsConnected = true;
+    $('#connectingIndicator').classList.remove('show');
+    $('#roomSection').style.display = 'none';
+    $('#dashboard').style.display = '';
+    $('#studentTag').textContent = '🟢 在线';
+    $('#studentTag').className = 'conn-tag online';
+    addLog('✅ 已连接中继！等待她的数据同步…');
+    // Tell student we're online
+    send({ type: 'supervisor-online' });
+  };
+
+  ws.onmessage = function(event) {
+    try {
+      var data = JSON.parse(event.data);
+      // Ignore welcome message from relay
+      if (data.type === 'welcome') {
+        if (data.peers > 0) {
+          addLog('👋 她已在线，等待数据同步…');
+        }
+        return;
+      }
+
+      switch (data.type) {
+        case 'status':
+          lastStatus = data.data;
+          updateDashboard(data.data);
+          break;
+        case 'goal-complete':
+          addLog('✅ 完成了：' + data.data.text);
+          if (data.data.completed >= data.data.total && data.data.total > 0) {
+            addLog('🎉 今日目标全部完成！');
+          }
+          break;
+        case 'sos':
+          playSOSAlert();
+          $('#sosBanner').classList.add('active');
+          $('#sosCard').classList.add('alert');
+          addLog('🆘 她按下了 SOS 按钮，正在冷静中…');
+          break;
+        case 'sos-end':
+          $('#sosBanner').classList.remove('active');
+          $('#sosCard').classList.remove('alert');
+          addLog('💚 SOS 结束，她回到了学习中');
+          break;
+        case 'sos-cancel':
+          $('#sosBanner').classList.remove('active');
+          $('#sosCard').classList.remove('alert');
+          addLog('↩️ 她取消了 SOS');
+          break;
+        case 'timer':
+          updateTimerUI(data.data);
+          break;
+        case 'timer-start':
+          addLog('▶️ 她开始了学习计时');
+          if (data.data) updateTimerUI(data.data);
+          break;
+        case 'timer-pause':
+          addLog('⏸ 她暂停了学习计时');
+          if (data.data) updateTimerUI(data.data);
+          break;
+        case 'timer-reset':
+          addLog('↺ 她重置了学习计时');
+          updateTimerUI({ status: 'idle', currentMs: 0, accumulatedMs: 0, sessionStart: null, sessionStartStr: null, sessions: [] });
+          break;
+        case 'history':
+          renderHistory(data.data);
+          break;
+      }
+    } catch(e) {}
+  };
+
+  ws.onclose = function() {
+    console.log('WebSocket closed');
+    wsConnected = false;
+    $('#studentTag').textContent = '🔴 离线';
+    $('#studentTag').className = 'conn-tag offline';
+    addLog('🔴 连接断开，3秒后自动重连…');
+    updateTimerUI({ status: 'idle', currentMs: 0, accumulatedMs: 0, sessionStart: null, sessionStartStr: null, sessions: [] });
+    $('#roomSection').style.display = '';
+    $('#dashboard').style.display = 'none';
+    $('#roomInput').disabled = false;
+    $('#joinBtn').disabled = false;
+    clearTimeout(wsReconnectTimer);
+    wsReconnectTimer = setTimeout(connect, 3000);
+  };
+
+  ws.onerror = function() {
+    // onclose will fire after onerror
+  };
+
+  // Timeout — if no student data in 30 seconds
+  setTimeout(function() {
+    if (wsConnected && !lastStatus) {
+      addLog('⚠️ 已连接中继，但未收到她的数据。她打开学习页面了吗？');
+    }
+  }, 30000);
+}
+
+function send(msg) {
+  if (ws && wsConnected && ws.readyState === WebSocket.OPEN) {
+    try { ws.send(JSON.stringify(msg)); } catch(e) {}
+  }
+}
+
+// ---- Dashboard ----
+let lastTimerData = null;
+let supervisorTimerInterval = null;
+
+function updateTimerUI(timerData) {
+  if (!timerData) return;
+  lastTimerData = timerData;
+
+  const section = $('#timerSection');
+  const badge = $('#timerBadge');
+  const big = $('#timerBig');
+  const meta = $('#timerMeta');
+
+  const currentMs = timerData.currentMs || 0;
+  const s = Math.floor(currentMs / 1000);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  big.textContent = String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(sec).padStart(2,'0');
+
+  const accMs = timerData.accumulatedMs || 0;
+  const accS = Math.floor(accMs / 1000);
+  const accH = Math.floor(accS / 3600);
+  const accM = Math.floor((accS % 3600) / 60);
+  $('#timerTotalSuper').textContent = '今日累计: ' + (accH > 0 ? accH + '小时' + accM + '分钟' : accM + '分钟');
+
+  if (timerData.status === 'running') {
+    section.className = 'timer-section studying';
+    badge.textContent = '🟢 学习中';
+    badge.className = 'timer-status-badge studying';
+    meta.textContent = timerData.sessionStartStr
+      ? '开始时间: ' + timerData.sessionStartStr
+      : '开始时间: 刚刚';
+  } else if (timerData.status === 'paused') {
+    section.className = 'timer-section';
+    badge.textContent = '🟡 已暂停';
+    badge.className = 'timer-status-badge paused';
+    meta.textContent = '开始时间: --';
+  } else {
+    section.className = 'timer-section';
+    badge.textContent = '⚪ 未开始';
+    badge.className = 'timer-status-badge idle';
+    meta.textContent = '开始时间: --';
+  }
+
+  // Render sessions
+  if (timerData.sessions && timerData.sessions.length > 0) {
+    const list = $('#timerSessionsList');
+    list.innerHTML = timerData.sessions.slice().reverse().map(sess => {
+      const startStr = new Date(sess.start).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+      const endStr = new Date(sess.end).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+      const durS = Math.floor(sess.duration / 1000);
+      const durM = Math.floor(durS / 60);
+      const durR = durS % 60;
+      return `<div class="timer-session-item">
+        <span class="timer-session-time">${startStr} → ${endStr}</span>
+        <span class="timer-session-dur">${durM}分${durR}秒</span>
+      </div>`;
+    }).join('');
+  } else {
+    $('#timerSessionsList').innerHTML = '<div style="color:#b0b5cc;font-size:12px;">暂无记录</div>';
+  }
+}
+
+function updateDashboard(data) {
+  lastStatus = data;
+  const completed = data.completed || 0;
+  const total = data.total || 0;
+  $('#statCompleted').textContent = total > 0 ? `${completed} / ${total}` : '—';
+  $('#statSOS').textContent = data.sosCount || 0;
+
+  if (data.timer) updateTimerUI(data.timer);
+
+  if (data.goals && data.goals.length > 0) {
+    $('#goalDisplay').innerHTML = data.goals.map(g => `
+      <div class="goal-row">
+        <span class="goal-icon">${g.done ? '✅' : '⏳'}</span>
+        <span class="${g.done ? 'goal-done' : ''}">${esc(g.text)}</span>
+      </div>
+    `).join('');
+  } else {
+    $('#goalDisplay').innerHTML = '<div style="color:#b0b5cc;font-size:13px;text-align:center;padding:10px;">她还没有添加目标</div>';
+  }
+}
+
+// ---- History ----
+function renderHistory(historyData) {
+  if (!historyData || historyData.length === 0) {
+    $('#historySList').innerHTML = '<div class="h-empty">还没有历史记录</div>';
+    $('#historySCount').textContent = '';
+    return;
+  }
+  $('#historySCount').textContent = `(${historyData.length}天)`;
+
+  historyData.sort((a, b) => b.date.localeCompare(a.date));
+
+  $('#historySList').innerHTML = historyData.map((day, hi) => {
+    const d = new Date(day.date + 'T00:00:00');
+    const weekdays = ['周日','周一','周二','周三','周四','周五','周六'];
+    const dateStr = `${d.getMonth()+1}月${d.getDate()}日 ${weekdays[d.getDay()]}`;
+    const totalM = Math.floor((day.totalMs || 0) / 60000);
+    const doneCount = (day.goals || []).filter(g => g.done).length;
+    const totalGoals = (day.goals || []).length;
+
+    const goalsHtml = (day.goals || []).length > 0
+      ? day.goals.map(g => `
+        <div class="h-day-goal">
+          <span>${g.done ? '✅' : '⏳'}</span>
+          <span class="${g.done ? 'h-day-goal-done' : ''}">${esc(g.text)}</span>
+        </div>`).join('')
+      : '<div class="h-day-goal">📭 没有记录目标</div>';
+
+    return `<div class="h-day" data-hi="${hi}">
+      <div class="h-day-head">
+        <span class="h-day-date">${dateStr}<span class="h-day-sub">${day.date}</span></span>
+        <span class="h-day-expand">▼</span>
+      </div>
+      <div class="h-day-stats">
+        <span>📝 ${doneCount}/${totalGoals}</span>
+        <span>⏱️ ${totalM}分钟</span>
+        <span>🆘 ${day.sosCount || 0}次</span>
+      </div>
+      <div class="h-day-detail">${goalsHtml}</div>
+    </div>`;
+  }).join('');
+
+  // Click to expand
+  $('#historySList').querySelectorAll('.h-day').forEach(el => {
+    el.addEventListener('click', function() {
+      this.classList.toggle('open');
+    });
+  });
+}
+
+// ---- Log ----
+function addLog(text) {
+  const time = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const list = $('#logList');
+  const item = document.createElement('div');
+  item.className = 'log-item';
+  item.innerHTML = `<span class="log-time">${time}</span><span>${text}</span>`;
+  list.prepend(item);
+  if (list.children.length > 50) list.removeChild(list.lastChild);
+}
+
+// ---- Encourage ----
+function sendEncourage(msg) {
+  if (!ws || !wsConnected) {
+    addLog('⚠️ 未连接，无法发送');
+    return;
+  }
+  try {
+    send({ type: 'encourage', message: msg });
+  } catch(e) {
+    addLog('⚠️ 发送失败');
+    return;
+  }
+  var sent = $('#encSent');
+  sent.style.display = '';
+  setTimeout(function() { sent.style.display = 'none'; }, 2000);
+  addLog('💬 发送鼓励：' + msg);
+}
+
+function esc(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ---- Events ----
+$('#joinBtn').addEventListener('click', connect);
+
+$('#roomInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') connect();
+});
+
+$('#encPresets').addEventListener('click', (e) => {
+  const chip = e.target.closest('.enc-chip');
+  if (!chip) return;
+  // Fill input instead of sending directly
+  $('#encInput').value = chip.dataset.msg;
+  $('#encInput').focus();
+  // Highlight active chip
+  document.querySelectorAll('.enc-chip').forEach(c => c.classList.remove('active-chip'));
+  chip.classList.add('active-chip');
+});
+
+function doSendEncourage() {
+  const msg = $('#encInput').value.trim();
+  if (!msg) return;
+  sendEncourage(msg);
+  $('#encInput').value = '';
+  document.querySelectorAll('.enc-chip').forEach(c => c.classList.remove('active-chip'));
+}
+
+$('#encSendBtn').addEventListener('click', doSendEncourage);
+
+$('#encInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') doSendEncourage();
+});
+
+$('#sosSendBtn').addEventListener('click', () => {
+  sendEncourage('看到你按SOS了，我在这里 👋 先呼吸，别急');
+});
+
+$('#historySHead').addEventListener('click', () => {
+  $('#historySection').classList.toggle('open');
+});
+
+// Auto-connect from URL param
+const params = new URLSearchParams(location.search);
+const roomParam = params.get('room');
+if (roomParam) {
+  room = roomParam.toUpperCase();
+  $('#roomInput').value = room;
+  $('#meTag').style.display = '';
+  // Auto-connect after a short delay for page to load
+  setTimeout(connect, 800);
+}
+
+// Handle page visibility — reconnect when returning
+document.addEventListener('visibilitychange', function() {
+  if (!document.hidden && room && !wsConnected) {
+    console.log('Page visible, reconnecting WebSocket...');
+    $('#connectingIndicator').classList.add('show');
+    connect();
+  }
+});
+})();
+</script>
+</body>
+</html>

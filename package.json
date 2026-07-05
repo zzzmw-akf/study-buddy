@@ -1,0 +1,9 @@
+{
+  "name": "study-buddy",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "localtunnel": "^2.0.2",
+    "ws": "^8.16.0"
+  }
+}
