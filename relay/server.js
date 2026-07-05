@@ -1,13 +1,13 @@
-// Study Buddy Relay v3.0 — All-in-one HTTP + WebSocket server
-// Serves frontend pages AND relays WebSocket messages in rooms.
-// Use with ngrok/localtunnel to expose to internet — standard 443 port everywhere.
+// Study Buddy Relay v4.0 — Production cloud server
+// Deploy to any cloud server with public IP. Standard HTTP port 80.
+// Phone (4G/5G/WiFi) and PC (broadband/wired/WiFi) all connect without issues.
 //
 // Architecture:
-//   HTTP:     /               → index.html
-//   HTTP:     /student.html   → student page
-//   HTTP:     /supervisor.html → supervisor page  
-//   HTTP:     /health         → health check
-//   WebSocket: /ws/ROOM_CODE  → join relay room
+//   HTTP:      /               → index.html
+//   HTTP:      /student.html   → student page
+//   HTTP:      /supervisor.html → supervisor page
+//   HTTP:      /health         → health check
+//   WebSocket: /ws/ROOM_CODE   → join relay room
 //
 // Frontend uses location.host for WebSocket URL → same-origin, no CORS.
 
@@ -199,18 +199,15 @@ function log(msg) {
 
 server.listen(PORT, () => {
   console.log('═══════════════════════════════════════════');
-  console.log('  Study Buddy Relay v3.0 — All-in-One');
-  console.log(`  HTTP + WebSocket on port ${PORT}`);
-  console.log(`  Serving files from: ${PUBLIC_DIR}`);
+  console.log('  考研能量站 中继服务器 v4.0');
+  console.log(`  端口: ${PORT}`);
+  console.log(`  文件目录: ${PUBLIC_DIR}`);
   console.log('═══════════════════════════════════════════');
   console.log('');
-  console.log('  Local access:');
-  console.log(`    http://localhost:${PORT}/`);
+  console.log(`  本地访问: http://localhost:${PORT}/`);
+  console.log(`  健康检查: http://localhost:${PORT}/health`);
   console.log('');
-  console.log('  To expose to internet, run in another terminal:');
-  console.log(`    ngrok http ${PORT}`);
-  console.log('    or: npx localtunnel --port ' + PORT);
-  console.log('');
-  console.log('  Then share the public URL with your friend!');
+  console.log('  云服务器部署: bash deploy.sh');
+  console.log('  详细指南: 查看 DEPLOY.md');
   console.log('═══════════════════════════════════════════');
 });
