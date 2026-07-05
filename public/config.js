@@ -1,9 +1,15 @@
-// CloudBase 配置
-// 1. 打开 https://console.cloud.tencent.com/tcb
-// 2. 微信/QQ 扫码登录，创建环境（选"按量付费"免费额度）
-// 3. 进入「环境设置」复制环境 ID 填入下方
-// 4. 进入「数据库」→ 新建集合 "messages" → 权限设为"所有用户可读写"
-// 5. 进入「身份认证」→ 登录方式 → 确保"匿名登录"已开启（默认开启）
+// Firebase 配置
+// 1. 打开 https://console.firebase.google.com
+// 2. 创建项目 → 添加 Web 应用（</> 图标）
+// 3. 复制 firebaseConfig 对象，替换下方内容
+// 4. Firebase Console → Firestore Database → 创建数据库 → 选择"测试模式"（允许读写30天）
+// 5. Firebase Console → Authentication → 登录方式 → 启用"匿名"
 
-var TCB_ENV_ID = 'study-buddy-d8g0w5juxa4271c16';  // CloudBase 环境 ID
-var TCB_REGION = 'ap-shanghai';  // 地域，默认上海
+var firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_PROJECT.appspot.com",
+  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+  appId: "YOUR_APP_ID"
+};

@@ -366,7 +366,7 @@ body {
   <!-- Connecting -->
   <div class="connecting-indicator" id="connectingIndicator">
     ⏳ 正在连接中继服务器<span class="connecting-dots"></span>
-    <br><small style="opacity:0.7">CloudBase 云端中继 · 腾讯云国内服务器 · 标准 HTTPS</small>
+    <br><small style="opacity:0.7">Firebase 云端中继 · Google 全球服务器 · 标准 HTTPS</small>
   </div>
 
   <!-- Connection hint -->
@@ -458,8 +458,10 @@ body {
   </div>
 </div>
 
-<!-- CloudBase SDK (腾讯云开发 · 国内服务器 · 标准 HTTPS) -->
-<script src="https://static.cloudbase.net/cloudbase-js-sdk/latest/cloudbase.full.js"></script>
+<!-- Firebase SDK (Google 全球 CDN · 标准 HTTPS 443) -->
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="config.js"></script>
 
 <script>
@@ -548,11 +550,12 @@ $('#soundBtn').addEventListener('click', () => {
   }
 });
 
-// ---- CloudBase Connection ----
-// 腾讯云开发实时数据库，走标准 HTTPS 443 端口
-var app = null;
-var db = null;
-var watcher = null;
+// ---- Firebase Connection ----
+// Firestore 实时数据库，走标准 HTTPS 443 端口
+// 无需配置安全域名、无需付费！
+var firestore = null;
+var auth = null;
+var unsubscribe = null;
 var connected = false;
 var room = '';
 var myRole = 'supervisor';
@@ -561,18 +564,19 @@ var connectTimer = null;
 var skipInitData = true;
 
 function initAndConnect() {
-  if (!TCB_ENV_ID || TCB_ENV_ID === 'YOUR_ENV_ID') {
-    addLog('⚠️ 请先在 config.js 填入 CloudBase 环境 ID');
+  if (!firebaseConfig || !firebaseConfig.apiKey || firebaseConfig.apiKey === 'YOUR_API_KEY') {
+    addLog('⚠️ 请先在 config.js 填入 Firebase 配置');
     return;
   }
 
-  app = cloudbase.init({ env: TCB_ENV_ID, region: TCB_REGION });
-  db = app.database();
+  firebase.initializeApp(firebaseConfig);
+  auth = firebase.auth();
+  firestore = firebase.firestore();
 
-  connectTCB();
+  connectFirebase();
 }
 
-function connectTCB() {
+function connectFirebase() {
   room = $('#roomInput').value.trim().toUpperCase();
   if (!room || room.length < 3) {
     $('#roomInput').placeholder = '请输入6位监督码';
@@ -583,63 +587,64 @@ function connectTCB() {
   $('#joinBtn').disabled = true;
   $('#connectingIndicator').classList.add('show');
 
-  if (watcher) { try { watcher.close(); } catch(e) {}; watcher = null; }
+  if (unsubscribe) { try { unsubscribe(); } catch(e) {}; unsubscribe = null; }
   connected = false;
   skipInitData = true;
 
-  // Step 1: Anonymous login
-  app.auth().anonymousAuthProvider().signIn().then(function() {
-    console.log('CloudBase: logged in as supervisor');
-  }).catch(function(err) {
-    console.log('CloudBase login error:', err.message);
-  }).then(function() {
-    // Step 2: Start watching
-    return new Promise(function(resolve, reject) {
-      watcher = db.collection('messages')
-        .where({ room: room })
-        .orderBy('timestamp', 'asc')
-        .watch({
-          onChange: function(snapshot) {
+  auth.signInAnonymously().then(function() {
+    console.log('Firebase: logged in as supervisor');
+
+    // Start watching
+    unsubscribe = firestore.collection('messages')
+      .where('room', '==', room)
+      .orderBy('timestamp', 'asc')
+      .onSnapshot(function(snapshot) {
+        snapshot.docChanges().forEach(function(change) {
+          if (change.type === 'added') {
+            var msg = change.doc.data();
+            msg._id = change.doc.id;
+
             if (skipInitData) {
-              skipInitData = false;
-              if (!connected) {
-                connected = true;
-                resolve();
-                console.log('CloudBase: watching room', room);
-                $('#connectingIndicator').classList.remove('show');
-                $('#roomSection').style.display = 'none';
-                $('#dashboard').style.display = '';
-                $('#studentTag').textContent = '🟢 在线';
-                $('#studentTag').className = 'conn-tag online';
-                addLog('✅ 已连接！等待她的数据同步…');
-                send({ type: 'supervisor-online' });
-              }
+              // Still collecting initial snapshot
               return;
             }
-            if (snapshot.docChanges) {
-              snapshot.docChanges.forEach(function(change) {
-                if (change.queueType === 'enqueue' && change.doc) {
-                  var msg = change.doc;
-                  if (msg.sender === myRole) return;
-                  handleIncoming(msg);
-                }
-              });
-            }
-          },
-          onError: function(err) {
-            console.error('CloudBase watch error:', err);
+
+            if (msg.sender === myRole) return;
+            handleIncoming(msg);
           }
         });
-    });
+
+        if (skipInitData) {
+          skipInitData = false;
+          connected = true;
+          console.log('Firebase: watching room', room);
+          $('#connectingIndicator').classList.remove('show');
+          $('#roomSection').style.display = 'none';
+          $('#dashboard').style.display = '';
+          $('#studentTag').textContent = '🟢 在线';
+          $('#studentTag').className = 'conn-tag online';
+          addLog('✅ 已连接！等待她的数据同步…');
+          send({ type: 'supervisor-online' });
+        }
+      }, function(err) {
+        console.error('Firebase watch error:', err);
+        connected = false;
+        $('#connectingIndicator').classList.remove('show');
+        addLog('🔴 连接断开: ' + err.message + '，3秒后重试…');
+        $('#roomInput').disabled = false;
+        $('#joinBtn').disabled = false;
+        clearTimeout(connectTimer);
+        connectTimer = setTimeout(connectFirebase, 3000);
+      });
   }).catch(function(err) {
-    console.error('CloudBase error:', err);
+    console.error('Firebase auth error:', err);
     connected = false;
     $('#connectingIndicator').classList.remove('show');
     addLog('🔴 连接失败: ' + err.message + '，3秒后重试…');
     $('#roomInput').disabled = false;
     $('#joinBtn').disabled = false;
     clearTimeout(connectTimer);
-    connectTimer = setTimeout(connectTCB, 3000);
+    connectTimer = setTimeout(connectFirebase, 3000);
   });
 
   // Timeout
@@ -651,15 +656,15 @@ function connectTCB() {
 }
 
 function send(msg) {
-  if (!connected || !db) return;
-  db.collection('messages').add({
+  if (!connected || !firestore) return;
+  firestore.collection('messages').add({
     room: room,
     type: msg.type,
     data: msg.data || msg,
     sender: myRole,
     timestamp: Date.now()
   }).catch(function(err) {
-    console.error('CloudBase send error:', err);
+    console.error('Firebase send error:', err);
   });
 }
 
@@ -928,7 +933,7 @@ if (roomParam) {
 // Handle page visibility — reconnect when returning
 document.addEventListener('visibilitychange', function() {
   if (!document.hidden && room && !connected) {
-    console.log('Page visible, reconnecting CloudBase...');
+    console.log('Page visible, reconnecting Firebase...');
     $('#connectingIndicator').classList.add('show');
     initAndConnect();
   }

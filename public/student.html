@@ -495,7 +495,7 @@ body {
   <!-- P2P Help -->
   <div class="help-bar" id="helpBar">
     ⚠️ 还没连上？<a href="#" id="retryLink">重试</a> · <a href="#" id="reconnectLink">强制重连</a>
-    <br><small style="opacity:0.7">CloudBase 云端中继 · 腾讯云国内服务器 · 标准 HTTPS</small>
+    <br><small style="opacity:0.7">Firebase 云端中继 · Google 全球服务器 · 标准 HTTPS</small>
   </div>
 
   <!-- Timer -->
@@ -555,8 +555,10 @@ body {
 <!-- Encourage Toast -->
 <div class="encourage-toast" id="encourageToast"></div>
 
-<!-- CloudBase SDK (腾讯云开发 · 国内服务器 · 标准 HTTPS) -->
-<script src="https://static.cloudbase.net/cloudbase-js-sdk/latest/cloudbase.full.js"></script>
+<!-- Firebase SDK (Google 全球 CDN · 标准 HTTPS 443) -->
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="config.js"></script>
 
 <script>
@@ -847,12 +849,13 @@ function sendHistory() {
   send({ type: 'history', data: history });
 }
 
-// ---- CloudBase Connection ----
-// 腾讯云开发实时数据库，走标准 HTTPS 443 端口
+// ---- Firebase Connection ----
+// Firestore 实时数据库，走标准 HTTPS 443 端口
 // 手机 4G/5G/WiFi、电脑 宽带/有线/WiFi 通吃
-var app = null;
-var db = null;
-var watcher = null;
+// 无需配置安全域名、无需付费！
+var firestore = null;
+var auth = null;
+var unsubscribe = null;
 var connected = false;
 var myId = '';
 var myRole = 'student';
@@ -871,8 +874,8 @@ function generateId() {
 }
 
 function initAndConnect() {
-  if (!TCB_ENV_ID || TCB_ENV_ID === 'YOUR_ENV_ID') {
-    $('#connText').textContent = '⚠️ 请先在 config.js 填入 CloudBase 环境 ID';
+  if (!firebaseConfig || !firebaseConfig.apiKey || firebaseConfig.apiKey === 'YOUR_API_KEY') {
+    $('#connText').textContent = '⚠️ 请先在 config.js 填入 Firebase 配置';
     setStatus('offline');
     return;
   }
@@ -883,87 +886,87 @@ function initAndConnect() {
   myId = roomParam ? roomParam.toUpperCase() : generateId();
   $('#roomCode').textContent = myId;
 
-  app = cloudbase.init({ env: TCB_ENV_ID, region: TCB_REGION });
-  db = app.database();
+  firebase.initializeApp(firebaseConfig);
+  auth = firebase.auth();
+  firestore = firebase.firestore();
 
-  connectTCB();
+  connectFirebase();
 }
 
-function connectTCB() {
+function connectFirebase() {
   setStatus('connecting');
-  $('#connText').textContent = '正在连接 CloudBase…';
+  $('#connText').textContent = '正在连接 Firebase…';
   $('#helpBar').style.display = 'none';
 
-  if (watcher) { try { watcher.close(); } catch(e) {}; watcher = null; }
+  if (unsubscribe) { try { unsubscribe(); } catch(e) {}; unsubscribe = null; }
   connected = false;
   skipInitData = true;
 
-  // Step 1: Anonymous login
-  app.auth().anonymousAuthProvider().signIn().then(function() {
-    console.log('CloudBase: logged in anonymously');
-  }).catch(function(err) {
-    console.log('CloudBase login error (may already be logged in):', err.message);
-  }).then(function() {
-    // Step 2: Start watching for supervisor messages
-    return new Promise(function(resolve, reject) {
-      watcher = db.collection('messages')
-        .where({ room: myId })
-        .orderBy('timestamp', 'asc')
-        .watch({
-          onChange: function(snapshot) {
+  auth.signInAnonymously().then(function() {
+    console.log('Firebase: logged in anonymously');
+
+    // Start watching for supervisor messages
+    unsubscribe = firestore.collection('messages')
+      .where('room', '==', myId)
+      .orderBy('timestamp', 'asc')
+      .onSnapshot(function(snapshot) {
+        snapshot.docChanges().forEach(function(change) {
+          if (change.type === 'added') {
+            var msg = change.doc.data();
+            msg._id = change.doc.id;
+
             if (skipInitData) {
-              // First snapshot is init data - skip it
-              skipInitData = false;
-              if (!connected) resolve(); // mark as connected after init
+              // Still collecting initial snapshot — skip
               return;
             }
-            // Process only new additions
-            if (snapshot.docChanges) {
-              snapshot.docChanges.forEach(function(change) {
-                if (change.queueType === 'enqueue' && change.doc) {
-                  var msg = change.doc;
-                  if (msg.sender === myRole) return; // skip own messages
-                  handleIncoming(msg);
-                }
-              });
-            }
-          },
-          onError: function(err) {
-            console.error('CloudBase watch error:', err);
+
+            if (msg.sender === myRole) return; // skip own messages
+            handleIncoming(msg);
           }
         });
-    });
-  }).then(function() {
-    connected = true;
-    console.log('CloudBase: watching room', myId);
-    setStatus('waiting');
-    $('#connText').textContent = '已连接 · 等待监督者加入';
-    $('#helpBar').style.display = 'none';
 
-    // Send initial status
-    sendStatus();
-    sendHistory();
+        if (skipInitData) {
+          // Initial snapshot loaded, we're now live
+          skipInitData = false;
+          connected = true;
+          console.log('Firebase: watching room', myId);
+          setStatus('waiting');
+          $('#connText').textContent = '已连接 · 等待监督者加入';
+          $('#helpBar').style.display = 'none';
+
+          sendStatus();
+          sendHistory();
+        }
+      }, function(err) {
+        console.error('Firebase watch error:', err);
+        connected = false;
+        setStatus('offline');
+        $('#connText').textContent = '连接断开，3秒后重试…';
+        $('#helpBar').style.display = '';
+        clearTimeout(connectTimer);
+        connectTimer = setTimeout(connectFirebase, 3000);
+      });
   }).catch(function(err) {
-    console.error('CloudBase error:', err);
+    console.error('Firebase auth error:', err);
     connected = false;
     setStatus('offline');
     $('#connText').textContent = '连接失败，3秒后重试…';
     $('#helpBar').style.display = '';
     clearTimeout(connectTimer);
-    connectTimer = setTimeout(connectTCB, 3000);
+    connectTimer = setTimeout(connectFirebase, 3000);
   });
 }
 
 function send(msg) {
-  if (!connected || !db) return;
-  db.collection('messages').add({
+  if (!connected || !firestore) return;
+  firestore.collection('messages').add({
     room: myId,
     type: msg.type,
     data: msg.data || msg,
     sender: myRole,
     timestamp: Date.now()
   }).catch(function(err) {
-    console.error('CloudBase send error:', err);
+    console.error('Firebase send error:', err);
   });
 }
 
@@ -1242,13 +1245,13 @@ $('#copyBtn').addEventListener('click', () => {
 
 $('#retryLink').addEventListener('click', function(e) {
   e.preventDefault();
-  connectTCB();
+  connectFirebase();
 });
 
 $('#reconnectLink').addEventListener('click', function(e) {
   e.preventDefault();
-  if (watcher) { try { watcher.close(); } catch(e) {} }
-  connectTCB();
+  if (unsubscribe) { try { unsubscribe(); } catch(e) {} }
+  connectFirebase();
 });
 });
 
@@ -1268,7 +1271,7 @@ document.addEventListener('visibilitychange', function() {
       updateTimerUI();
       sendTimerUpdate();
     }
-    // CloudBase's watch() handles reconnection automatically. Just send fresh status.
+    // Firebase's onSnapshot handles reconnection automatically. Just send fresh status.
     if (connected) {
       sendStatus();
     }
