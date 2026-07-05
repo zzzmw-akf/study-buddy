@@ -2,371 +2,452 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>考研能量站 · 监督模式</title>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 body {
   font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
-  background: linear-gradient(180deg, #f0f4ff 0%, #e8ecf8 40%, #dce2f2 100%);
-  min-height:100vh; color:#3a3f5c;
-  -webkit-tap-highlight-color:transparent;
+  background: #f5f5f5;
+  color: #333;
+  min-height: 100vh;
 }
-.page { max-width:500px; margin:0 auto; padding:20px 16px 60px; }
+/* ---- Room Section ---- */
+.room-section {
+  max-width: 400px;
+  margin: 60px auto;
+  padding: 40px 30px;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+  text-align: center;
+}
+.room-section h2 { font-size: 22px; margin-bottom: 8px; }
+.room-section p { font-size: 14px; color: #888; margin-bottom: 20px; }
+#roomInput {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  font-size: 18px;
+  letter-spacing: 4px;
+  text-align: center;
+  margin-bottom: 12px;
+}
+#roomInput:focus { border-color: #7c4dff; outline: none; }
+#joinBtn {
+  width: 100%;
+  padding: 12px;
+  background: #7c4dff;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+#joinBtn:hover { background: #651fff; }
+#connectingIndicator {
+  display: none;
+  margin-top: 12px;
+  font-size: 14px;
+  color: #7c4dff;
+}
+#connectingIndicator.show { display: block; }
 
-/* Header */
-.header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
-.logo { font-size:22px; font-weight:800; color:#5b6abf; display:flex; align-items:center; gap:8px; }
-.conn-row { display:flex; gap:8px; align-items:center; }
-.conn-tag { font-size:11px; padding:5px 12px; border-radius:20px; font-weight:700; }
-.conn-tag.online { background:#e8f5e9; color:#2e7d32; }
-.conn-tag.offline { background:#fce4ec; color:#c62828; }
-.sound-btn { width:36px; height:36px; border-radius:50%; border:1.5px solid rgba(91,106,191,0.2); background:rgba(255,255,255,0.7); cursor:pointer; font-size:18px; display:flex; align-items:center; justify-content:center; transition:all 0.2s; }
-.sound-btn:active { transform:scale(0.9); }
-.sound-btn.muted { opacity:0.5; }
+/* ---- Dashboard ---- */
+.dashboard { display: none; max-width: 900px; margin: 0 auto; padding: 20px; }
+.header-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+.header-bar h2 { font-size: 20px; }
+.conn-tag {
+  font-size: 13px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  background: #eee;
+  color: #888;
+}
+.conn-tag.online { background: #e8f5e9; color: #2e7d32; }
 
-/* Room input */
-.room-section { background:rgba(255,255,255,0.7); border-radius:14px; padding:14px 16px; margin-bottom:18px; backdrop-filter:blur(10px); border:1px solid rgba(91,106,191,0.12); }
-.room-section label { font-size:12px; color:#7a80a0; display:block; margin-bottom:8px; }
-.room-input-row { display:flex; gap:8px; }
-.room-input { flex:1; border:1.5px solid rgba(91,106,191,0.2); border-radius:10px; padding:10px 12px; font-size:15px; outline:none; background:rgba(255,255,255,0.9); letter-spacing:3px; font-weight:700; color:#5b6abf; text-transform:uppercase; }
-.room-input:focus { border-color:#5b6abf; }
-.join-btn { padding:10px 18px; border-radius:10px; border:none; background:#5b6abf; color:#fff; font-size:14px; font-weight:700; cursor:pointer; transition:all 0.15s; }
-.join-btn:active { background:#4a5aaf; }
-.join-btn:disabled { opacity:0.5; cursor:not-allowed; }
-.connecting-indicator { display:none; font-size:12px; color:#7a80a0; margin-top:8px; }
-.connecting-indicator.show { display:block; }
+/* ---- Status cards ---- */
+.status-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.status-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+}
+.status-card h4 { font-size: 13px; color: #888; margin-bottom: 8px; }
+.status-card .value { font-size: 28px; font-weight: 700; color: #333; }
+.status-card .sub { font-size: 12px; color: #aaa; margin-top: 4px; }
 
-/* Dashboard */
-.dashboard { display:none; }
-.dashboard.show { display:block; }
+/* ---- Timer card ---- */
+.timer-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+  margin-bottom: 24px;
+  text-align: center;
+}
+.timer-card .time-display {
+  font-size: 48px;
+  font-weight: 700;
+  color: #7c4dff;
+  font-variant-numeric: tabular-nums;
+}
+.timer-card .time-label { font-size: 14px; color: #888; margin-top: 8px; }
 
-/* Status cards */
-.status-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:18px; }
-.status-card { background:rgba(255,255,255,0.75); border-radius:14px; padding:14px; backdrop-filter:blur(10px); border:1px solid rgba(91,106,191,0.08); text-align:center; }
-.status-card .num { font-size:32px; font-weight:800; color:#5b6abf; }
-.status-card .label { font-size:11px; color:#8a90b0; margin-top:4px; }
+/* ---- Goals card ---- */
+.goals-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+  margin-bottom: 24px;
+}
+.goals-card h3 { font-size: 16px; margin-bottom: 16px; }
+.goal-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+.goal-row:last-child { border-bottom: none; }
+.goal-row .check { color: #ccc; font-size: 18px; }
+.goal-row.done .check { color: #4caf50; }
+.goal-row .text { flex: 1; font-size: 15px; }
+.goal-row.done .text { text-decoration: line-through; color: #aaa; }
 
-/* Goals */
-.goals-card { background:rgba(255,255,255,0.75); border-radius:14px; padding:16px; margin-bottom:18px; backdrop-filter:blur(10px); border:1px solid rgba(91,106,191,0.08); }
-.goals-title { font-size:14px; font-weight:700; color:#5b6abf; margin-bottom:12px; display:flex; align-items:center; gap:6px; }
-.goal-item { display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid rgba(91,106,191,0.06); font-size:14px; }
-.goal-item:last-child { border-bottom:none; }
-.goal-dot { width:18px; height:18px; border-radius:50%; border:2px solid rgba(91,106,191,0.25); flex-shrink:0; }
-.goal-dot.done { background:#5b6abf; border-color:#5b6abf; }
-.goal-text { flex:1; }
-.goal-text.done { text-decoration:line-through; opacity:0.5; }
-.goals-empty { text-align:center; padding:16px; color:#a0a8c8; font-size:13px; }
+/* ---- Actions ---- */
+.actions {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+.actions button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+#btnEncourage {
+  background: #7c4dff;
+  color: #fff;
+}
+#btnEncourage:hover { background: #651fff; }
+#btnSosAlert {
+  background: #ffebee;
+  color: #d32f2f;
+}
+#btnSosAlert:hover { background: #ffcdd2; }
 
-/* Timer status */
-.timer-status { background:rgba(255,255,255,0.75); border-radius:14px; padding:16px; margin-bottom:18px; backdrop-filter:blur(10px); border:1px solid rgba(91,106,191,0.08); text-align:center; }
-.timer-status .time { font-size:36px; font-weight:800; color:#5b6abf; letter-spacing:2px; }
-.timer-status .state { font-size:12px; color:#8a90b0; margin-top:6px; }
-
-/* Log */
-.log-card { background:rgba(255,255,255,0.75); border-radius:14px; padding:16px; margin-bottom:18px; backdrop-filter:blur(10px); border:1px solid rgba(91,106,191,0.08); }
-.log-title { font-size:14px; font-weight:700; color:#5b6abf; margin-bottom:10px; display:flex; align-items:center; gap:6px; }
-.log-list { font-size:13px; color:#7a80a0; max-height:200px; overflow-y:auto; }
-.log-item { padding:5px 0; border-bottom:1px solid rgba(91,106,191,0.05); display:flex; gap:8px; }
-.log-item:last-child { border-bottom:none; }
-.log-time { font-size:11px; color:#a0a8c8; flex-shrink:0; }
-.log-msg { flex:1; }
-
-/* Encourage */
-.encourage-card { background:rgba(255,255,255,0.75); border-radius:14px; padding:16px; margin-bottom:18px; backdrop-filter:blur(10px); border:1px solid rgba(91,106,191,0.08); }
-.encourage-title { font-size:14px; font-weight:700; color:#5b6abf; margin-bottom:12px; }
-.encourage-input-row { display:flex; gap:8px; }
-.encourage-input { flex:1; border:1.5px solid rgba(91,106,191,0.2); border-radius:10px; padding:10px 12px; font-size:14px; outline:none; background:rgba(255,255,255,0.9); }
-.encourage-input:focus { border-color:#5b6abf; }
-.send-btn { padding:10px 16px; border-radius:10px; border:none; background:linear-gradient(135deg,#5b6abf,#8691d6); color:#fff; font-size:14px; font-weight:700; cursor:pointer; transition:all 0.15s; }
-.send-btn:active { background:#4a5aaf; }
-
-/* Error bar */
-.error-bar { background:rgba(255,220,220,0.9); border-radius:10px; padding:10px 14px; margin-bottom:16px; font-size:13px; color:#c62828; border:1px solid rgba(198,40,40,0.3); display:none; }
-.error-bar.show { display:block; }
-
-.no-room { text-align:center; padding:60px 20px; color:#a0a8c8; font-size:15px; }
+/* ---- Log ---- */
+.log-section {
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+}
+.log-section h3 { font-size: 16px; margin-bottom: 12px; }
+#logList {
+  max-height: 300px;
+  overflow-y: auto;
+  font-size: 13px;
+  color: #666;
+}
+.log-item {
+  padding: 6px 0;
+  border-bottom: 1px solid #f5f5f5;
+}
+.log-item::before { content: '· '; color: #7c4dff; }
 </style>
 </head>
 <body>
 
-<div class="page">
-  <div class="header">
-    <div class="logo">🔥 考研能量站 · 监督者</div>
-    <div class="conn-row" id="connRow" style="display:none;">
-      <div class="conn-tag offline" id="studentTag">🔴 离线</div>
-      <button class="sound-btn" id="soundBtn" title="提示音">🔔</button>
+<!-- Room Input -->
+<div class="room-section" id="roomSection">
+  <h2>🔍 输入监督码</h2>
+  <p>让学生把房间号发给你</p>
+  <input type="text" id="roomInput" placeholder="6位房间号" maxlength="6">
+  <button id="joinBtn">连接</button>
+  <div id="connectingIndicator">正在连接…</div>
+</div>
+
+<!-- Dashboard -->
+<div class="dashboard" id="dashboard">
+  <div class="header-bar">
+    <h2>📊 学习监督面板</h2>
+    <div>
+      <span class="conn-tag" id="studentTag">🔴 离线</span>
     </div>
   </div>
 
-  <div class="error-bar" id="errorBar"></div>
-
-  <!-- Room Section -->
-  <div class="room-section" id="roomSection">
-    <label>输入她的监督码（6位字母数字）</label>
-    <div class="room-input-row">
-      <input class="room-input" id="roomInput" placeholder="例如 ABC123" maxlength="8">
-      <button class="join-btn" id="joinBtn">连接</button>
+  <div class="status-grid">
+    <div class="status-card">
+      <h4>✅ 目标完成</h4>
+      <div class="value" id="goalsCompleted">0 / 0</div>
+      <div class="sub">今日目标</div>
     </div>
-    <div class="connecting-indicator" id="connectingIndicator">⏳ 正在连接云端，请稍候…</div>
-  </div>
-
-  <!-- Dashboard -->
-  <div class="dashboard" id="dashboard">
-    <div class="status-grid">
-      <div class="status-card"><div class="num" id="statGoals">0/0</div><div class="label">目标完成</div></div>
-      <div class="status-card"><div class="num" id="statSos">0</div><div class="label">鼓励次数</div></div>
-      <div class="status-card"><div class="num" id="statTimer">00:00</div><div class="label">学习时长</div></div>
-      <div class="status-card"><div class="num" id="statSessions">0</div><div class="label">学习次数</div></div>
-    </div>
-
-    <div class="goals-card">
-      <div class="goals-title">🎯 她的目标</div>
-      <div id="goalsList"><div class="goals-empty">暂无目标</div></div>
-    </div>
-
-    <div class="timer-status">
-      <div class="goals-title">⏱️ 学习状态</div>
-      <div class="time" id="timerDisplay">--:--</div>
-      <div class="state" id="timerState">等待开始…</div>
-    </div>
-
-    <div class="log-card">
-      <div class="log-title">📜 实时动态</div>
-      <div class="log-list" id="logList"><div style="color:#a0a8c8;font-size:13px;text-align:center;padding:20px 0;">连接后将显示动态</div></div>
-    </div>
-
-    <div class="encourage-card">
-      <div class="encourage-title">💪 发送鼓励</div>
-      <div class="encourage-input-row">
-        <input class="encourage-input" id="encourageInput" placeholder="输入鼓励的话…" maxlength="50">
-        <button class="send-btn" id="sendEncourageBtn">发送</button>
-      </div>
+    <div class="status-card">
+      <h4>🆘 求助次数</h4>
+      <div class="value" id="sosTotal">0</div>
+      <div class="sub">累计求助</div>
     </div>
   </div>
 
-  <div class="no-room" id="noRoomMsg" style="display:none;">
-    ⚠️ 未指定监督码。<br>请从学习端分享的链接进入，或在上方输入监督码。
+  <div class="timer-card">
+    <div class="time-display" id="timerDisplay">00:00</div>
+    <div class="time-label" id="timerLabel">未开始学习</div>
+  </div>
+
+  <div class="goals-card">
+    <h3>📋 今日目标</h3>
+    <div id="goalsList"><p style="color:#ccc;">暂无目标</p></div>
+  </div>
+
+  <div class="actions">
+    <button id="btnEncourage">💪 发送鼓励</button>
+    <button id="btnSosAlert">🆘 求助提醒</button>
+  </div>
+
+  <div class="log-section">
+    <h3>📝 连接日志</h3>
+    <div id="logList"></div>
   </div>
 </div>
 
 <script src="config.js"></script>
 <script>
-(function() {
-const $ = s => document.querySelector(s);
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+// ========== Pure REST API helpers ==========
+var API_URL = SUPABASE_URL + '/rest/v1/';
+var HEADERS = {
+  'Content-Type': 'application/json',
+  'apikey': SUPABASE_ANON_KEY,
+  'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+  'Prefer': 'return=representation'
+};
 
-function playBeep() {
-  if (localStorage.getItem('sb_sound_mute') === '1') return;
-  try {
-    const o = audioCtx.createOscillator();
-    const g = audioCtx.createGain();
-    o.connect(g); g.connect(audioCtx.destination);
-    o.frequency.value = 880;
-    g.gain.setValueAtTime(0.3, audioCtx.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
-    o.start(audioCtx.currentTime); o.stop(audioCtx.currentTime + 0.5);
-  } catch(e) {}
-}
-
-function addLog(msg, isAlert) {
-  const list = $('#logList');
-  if (list.querySelector('div[style]')) list.innerHTML = '';
-  const now = new Date().toLocaleTimeString('zh-CN', {hour:'2-digit', minute:'2-digit'});
-  const div = document.createElement('div'); div.className = 'log-item';
-  div.innerHTML = `<span class="log-time">${now}</span><span class="log-msg">${msg}</span>`;
-  list.prepend(div);
-  if (list.children.length > 50) list.removeChild(list.lastChild);
-  if (isAlert) playBeep();
-}
-
-function showError(msg) {
-  const bar = $('#errorBar');
-  bar.textContent = '⚠️ ' + msg;
-  bar.classList.add('show');
-}
-
-function hideError() {
-  $('#errorBar').classList.remove('show');
-}
-
-// ---- Supabase REST + Polling ----
-var REST = '';
-var connected = false;
-var room = '';
-var myRole = 'supervisor';
-var pollTimer = null;
-var lastPollTs = 0;
-var lastStatus = null;
-
-function apiHeaders() {
-  return {
-    'apikey': SUPABASE_ANON_KEY,
-    'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
-    'Content-Type': 'application/json'
+function api(path, method, body) {
+  var url = API_URL + path;
+  var opts = {
+    method: method,
+    headers: HEADERS
   };
-}
-
-function initAndConnect() {
-  if (!SUPABASE_URL || SUPABASE_URL === 'YOUR_SUPABASE_URL' || !SUPABASE_ANON_KEY || SUPABASE_ANON_KEY === 'YOUR_SUPABASE_ANON_KEY') {
-    showError('请先在 config.js 填入 Supabase 配置');
-    return;
-  }
-  REST = SUPABASE_URL.replace(/\/$/, '') + '/rest/v1';
-  connectSupabase();
-}
-
-function connectSupabase() {
-  room = $('#roomInput').value.trim().toUpperCase();
-  if (!room || room.length < 3) { $('#roomInput').placeholder = '请输入6位监督码'; return; }
-
-  $('#roomInput').disabled = true;
-  $('#joinBtn').disabled = true;
-  $('#connectingIndicator').classList.add('show');
-  hideError();
-
-  fetch(REST + '/messages?room=eq.' + encodeURIComponent(room) + '&limit=1', {
-    headers: apiHeaders()
-  }).then(function(r) {
-    if (!r.ok) throw new Error('HTTP ' + r.status);
+  if (body) opts.body = JSON.stringify(body);
+  return fetch(url, opts).then(function(r) {
+    if (!r.ok) {
+      return r.text().then(function(text) {
+        var hint = '';
+        if (r.status === 401) hint = ' (API key 无效)';
+        if (r.status === 403) hint = ' (权限不足：请在 Supabase SQL Editor 执行 GRANT SELECT, INSERT ON public.messages TO anon;)';
+        if (text && text.indexOf('permission denied') !== -1) hint = ' (权限不足：请给 anon 角色授权)';
+        throw new Error('HTTP ' + r.status + hint + (text ? ': ' + text.substring(0, 120) : ''));
+      });
+    }
+    if (r.status === 204) return {};
     return r.json();
-  }).then(function() {
-    connected = true;
-    $('#connectingIndicator').classList.remove('show');
-    $('#roomSection').style.display = 'none';
-    $('#dashboard').classList.add('show');
-    $('#connRow').style.display = '';
-    $('#studentTag').textContent = '🟢 在线';
-    $('#studentTag').className = 'conn-tag online';
-    addLog('✅ 已连接！等待她的数据同步…');
-    startPolling();
-    send({type:'supervisor-online'});
-  }).catch(function(err) {
-    connected = false;
-    $('#connectingIndicator').classList.remove('show');
-    $('#roomInput').disabled = false;
-    $('#joinBtn').disabled = false;
-    showError('连接失败: ' + err.message + '，3秒后重试…');
-    addLog('🔴 连接失败: ' + err.message);
-    setTimeout(connectSupabase, 3000);
   });
 }
 
+// ========== State ==========
+var room = '';
+var myRole = 'supervisor';
+var connected = false;
+var lastStatus = null;
+var pollTimer = null;
+var lastMessageId = 0;
+
+// ========== Init ==========
+function initAndConnect() {
+  if (!SUPABASE_URL || SUPABASE_URL === 'YOUR_SUPABASE_URL') {
+    addLog('⚠️ 请先在 config.js 填入 Supabase 配置');
+    return;
+  }
+
+  room = document.getElementById('roomInput').value.trim().toUpperCase();
+  if (!room || room.length < 3) {
+    document.getElementById('roomInput').placeholder = '请输入6位监督码';
+    return;
+  }
+
+  document.getElementById('roomInput').disabled = true;
+  document.getElementById('joinBtn').disabled = true;
+  document.getElementById('connectingIndicator').classList.add('show');
+
+  // Test connection
+  api('messages?select=id&room=eq.' + encodeURIComponent(room) + '&limit=1', 'GET')
+    .then(function() {
+      connected = true;
+      document.getElementById('connectingIndicator').classList.remove('show');
+      document.getElementById('roomSection').style.display = 'none';
+      document.getElementById('dashboard').style.display = '';
+      document.getElementById('studentTag').textContent = '🟢 在线';
+      document.getElementById('studentTag').className = 'conn-tag online';
+      addLog('✅ 已连接！等待学生的数据同步…');
+      send({ type: 'supervisor-online' });
+      startPolling();
+    })
+    .catch(function(err) {
+      console.error('Supabase error:', err);
+      connected = false;
+      document.getElementById('connectingIndicator').classList.remove('show');
+      var msg = err.message || '';
+      if (msg.indexOf('403') !== -1 || msg.indexOf('permission denied') !== -1 || msg.indexOf('权限') !== -1) {
+        addLog('❌ 数据库权限不足：请在 Supabase SQL Editor 执行 GRANT SELECT, INSERT ON public.messages TO anon;');
+      } else if (msg.indexOf('404') !== -1) {
+        addLog('❌ messages 表不存在');
+      } else {
+        addLog('🔴 连接失败: ' + msg + '，3秒后重试…');
+      }
+      document.getElementById('roomInput').disabled = false;
+      document.getElementById('joinBtn').disabled = false;
+      setTimeout(initAndConnect, 3000);
+    });
+}
+
+// ========== Polling ==========
 function startPolling() {
-  lastPollTs = Date.now();
   if (pollTimer) clearInterval(pollTimer);
   pollTimer = setInterval(function() {
     if (!connected) return;
-    fetch(REST + '/messages?room=eq.' + encodeURIComponent(room) + '&timestamp=gt.' + lastPollTs + '&order=timestamp.asc', {
-      headers: apiHeaders()
-    }).then(function(r) { return r.json(); }).then(function(msgs) {
-      msgs.forEach(function(msg) {
-        if (msg.sender === myRole) return;
-        handleIncoming(msg);
-        lastPollTs = Math.max(lastPollTs, msg.timestamp || 0);
-      });
-    }).catch(function() {});
+    api('messages?select=*&room=eq.' + encodeURIComponent(room) + '&sender=neq.supervisor&id=gt.' + lastMessageId + '&order=id.asc', 'GET')
+      .then(function(msgs) {
+        msgs.forEach(function(msg) {
+          if (msg.id > lastMessageId) lastMessageId = msg.id;
+          handleIncoming(msg);
+        });
+      })
+      .catch(function(err) { console.error('Poll error:', err); });
   }, 2000);
-
-  setTimeout(function() {
-    if (connected && !lastStatus) {
-      addLog('⚠️ 已连接，但未收到她的数据。她打开学习页面了吗？');
-    }
-  }, 30000);
 }
 
+// ========== Send ==========
 function send(msg) {
   if (!connected) return;
-  fetch(REST + '/messages', {
-    method: 'POST',
-    headers: Object.assign({}, apiHeaders(), {'Prefer': 'return=minimal'}),
-    body: JSON.stringify({
-      room: room, type: msg.type,
-      data: msg.data || msg,
-      sender: myRole, timestamp: Date.now()
-    })
-  }).catch(function(err) { console.error('Send error:', err); });
+  api('messages', 'POST', {
+    room: room,
+    type: msg.type,
+    data: msg.data || msg,
+    sender: myRole,
+    timestamp: Date.now()
+  }).catch(function(err) {
+    console.error('Send error:', err);
+  });
 }
 
+// ========== Handle incoming ==========
 function handleIncoming(msg) {
   switch (msg.type) {
     case 'status':
+    case 'history':
       lastStatus = msg.data || msg;
       updateDashboard(lastStatus);
       break;
     case 'sos':
-      addLog('🆘 她发送了鼓励信号！今日第 ' + ((msg.data && msg.data.count) || '?') + ' 次', true);
+      addLog('🆘 学生发送了求助！');
       break;
   }
 }
 
+// ========== Dashboard ==========
 function updateDashboard(data) {
-  if (!data) return;
+  // Goals
   if (data.goals) {
-    const list = $('#goalsList');
-    if (data.goals.length === 0) { list.innerHTML = '<div class="goals-empty">暂无目标</div>'; }
-    else {
+    var completed = data.goals.filter(function(g) { return g.done; }).length;
+    document.getElementById('goalsCompleted').textContent = completed + ' / ' + data.goals.length;
+
+    var list = document.getElementById('goalsList');
+    if (data.goals.length === 0) {
+      list.innerHTML = '<p style="color:#ccc;">暂无目标</p>';
+    } else {
       list.innerHTML = data.goals.map(function(g) {
-        return `<div class="goal-item"><div class="goal-dot ${g.done?'done':''}"></div><span class="goal-text ${g.done?'done':''}">${escapeHtml(g.text)}</span></div>`;
+        return '<div class="goal-row' + (g.done ? ' done' : '') + '">' +
+          '<span class="check">' + (g.done ? '✅' : '☐') + '</span>' +
+          '<span class="text">' + escapeHtml(g.text) + '</span>' +
+          '</div>';
       }).join('');
     }
-    $('#statGoals').textContent = (data.completed || 0) + '/' + (data.total || 0);
   }
+
+  // SOS
+  if (data.sosCount !== undefined) {
+    document.getElementById('sosTotal').textContent = data.sosCount;
+  }
+
+  // Timer
   if (data.timer) {
-    const t = data.timer;
-    const ms = t.status === 'running' && t.sessionStart
-      ? t.accumulatedMs + (Date.now() - t.sessionStart) : t.accumulatedMs || 0;
-    const h = Math.floor(ms / 3600000);
-    const m = Math.floor((ms % 3600000) / 60000);
-    const s = Math.floor((ms % 60000) / 1000);
-    $('#timerDisplay').textContent = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-    const stateMap = {idle:'等待开始…', running:'正在学习中 🔥', paused:'已暂停'};
-    $('#timerState').textContent = stateMap[t.status] || t.status;
-    $('#statTimer').textContent = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
-    $('#statSessions').textContent = (t.sessions && t.sessions.length) || 0;
+    var t = data.timer;
+    var ms = t.status === 'running' ? (t.accumulatedMs || 0) + (Date.now() - t.sessionStart) : (t.accumulatedMs || 0);
+    var totalSec = Math.floor(ms / 1000);
+    var hrs = Math.floor(totalSec / 3600);
+    var mins = Math.floor((totalSec % 3600) / 60);
+    var secs = totalSec % 60;
+    var display = '';
+    if (hrs > 0) display += hrs + ':';
+    display += String(mins).padStart(2, '0') + ':' + String(secs).padStart(2, '0');
+    document.getElementById('timerDisplay').textContent = display;
+
+    var label = '';
+    if (t.status === 'running') label = '正在学习中…';
+    else if (t.status === 'paused') label = '已暂停';
+    else label = '未开始';
+    document.getElementById('timerLabel').textContent = label;
   }
-  if (data.sosCount !== undefined) { $('#statSos').textContent = data.sosCount; }
 }
 
-function escapeHtml(s) {
-  const d = document.createElement('div'); d.textContent = s; return d.innerHTML;
+// ========== Actions ==========
+document.getElementById('joinBtn').addEventListener('click', initAndConnect);
+document.getElementById('roomInput').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') initAndConnect();
+});
+
+document.getElementById('btnEncourage').addEventListener('click', function() {
+  var messages = [
+    '加油！你可以的！💪',
+    '专注当下，未来可期！✨',
+    '每一次努力都在积累成功！🌟',
+    '相信自己，你比想象中更强大！🚀'
+  ];
+  var msg = messages[Math.floor(Math.random() * messages.length)];
+  send({ type: 'encourage', data: { message: msg } });
+  addLog('💪 已发送鼓励：' + msg);
+});
+
+document.getElementById('btnSosAlert').addEventListener('click', function() {
+  send({ type: 'sos-alert', message: '老师提醒：请确认是否需要帮助？' });
+  addLog('🆘 已发送求助提醒');
+});
+
+// ========== Log ==========
+function addLog(text) {
+  var list = document.getElementById('logList');
+  var div = document.createElement('div');
+  div.className = 'log-item';
+  div.textContent = new Date().toLocaleTimeString('zh-CN') + ' ' + text;
+  list.insertBefore(div, list.firstChild);
 }
 
-// ---- Init ----
-$('#joinBtn').addEventListener('click', initAndConnect);
-$('#roomInput').addEventListener('keydown', function(e) { if (e.key === 'Enter') initAndConnect(); });
-
-$('#sendEncourageBtn').addEventListener('click', function() {
-  const input = $('#encourageInput');
-  const msg = input.value.trim();
-  if (!msg) return;
-  send({type:'encourage', data:{message:msg}});
-  addLog('💪 你: ' + msg);
-  input.value = '';
-});
-$('#encourageInput').addEventListener('keydown', function(e) { if (e.key === 'Enter') $('#sendEncourageBtn').click(); });
-
-$('#soundBtn').addEventListener('click', function() {
-  const muted = localStorage.getItem('sb_sound_mute') === '1';
-  localStorage.setItem('sb_sound_mute', muted ? '0' : '1');
-  $('#soundBtn').textContent = muted ? '🔔' : '🔕';
-  $('#soundBtn').classList.toggle('muted', !muted);
-});
-
-// Auto-join from URL
-const params = new URLSearchParams(location.search);
-const roomParam = params.get('room');
-if (roomParam) {
-  $('#roomInput').value = roomParam.toUpperCase();
-  initAndConnect();
-} else {
-  $('#noRoomMsg').style.display = '';
+// ========== Utility ==========
+function escapeHtml(text) {
+  var div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
 }
-
-document.addEventListener('visibilitychange', function() {
-  if (!document.hidden && connected) { /* re-poll */ }
-});
-})();
 </script>
 </body>
 </html>

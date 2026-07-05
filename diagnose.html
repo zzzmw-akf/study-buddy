@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>连接诊断</title>
+<style>
+body { font-family: sans-serif; padding: 20px; background: #f5f5f5; }
+pre { background: #333; color: #0f0; padding: 15px; border-radius: 8px; overflow-x: auto; font-size: 13px; }
+button { padding: 10px 20px; font-size: 16px; cursor: pointer; }
+.ok { color: green; }
+.err { color: red; }
+</style>
+</head>
+<body>
+<h2>🔬 Supabase 连接诊断</h2>
+<button onclick="runDiagnostics()">开始诊断</button>
+<div id="results"></div>
+
+<script>
+var SUPABASE_URL = 'https://jcsxmguhtrjjyrribbyh.supabase.co';
+var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impjc3htZ3VodHJqanlycmliYnloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMyNDk5MDgsImV4cCI6MjA5ODgyNTkwOH0.0GnoeW9SZrznm4T09b_lLdL-lbW29pylIjZd-xNM_rM';
+
+function log(msg) {
+  document.getElementById('results').innerHTML += msg + '<br>';
+}
+
+var HEADERS = {
+  'apikey': SUPABASE_ANON_KEY,
+  'Authorization': 'Bearer ' + SUPABASE_ANON_KEY
+};
+
+function api(path) {
+  return fetch(SUPABASE_URL + '/rest/v1/' + path, {
+    method: 'GET',
+    headers: HEADERS
+  });
+}
+
+async function runDiagnostics() {
+  document.getElementById('results').innerHTML = '';
+  log('⏳ 开始诊断...<br><br>');
+
+  var projectOnline = false;
+
+  // Test 1: Check if project is online (use messages table directly, not root endpoint)
+  log('<b>测试1: 项目是否在线</b>');
+  try {
+    var r = await api('messages?select=id&limit=1');
+    var text = await r.text();
+    log('  HTTP ' + r.status + ' ');
+    if (r.ok || r.status === 401 || r.status === 403 || text.includes('permission denied')) {
+      projectOnline = true;
+      log('<span class="ok">✅ 项目在线</span>');
+    } else if (r.status === 404 || text.includes('does not exist')) {
+      projectOnline = true;
+      log('<span class="err">❌ messages 表不存在</span>');
+      log('  响应: ' + text.substring(0, 200));
+    } else {
+      log('<span class="err">❌ 项目可能离线或URL错误</span>');
+      log('  响应: ' + text.substring(0, 200));
+    }
+  } catch(e) {
+    log('  <span class="err">❌ 网络错误: ' + e.message + '</span>');
+    log('  👉 Supabase 项目可能已暂停，请到 supabase.com 控制台唤醒');
+  }
+
+  // Test 2: Check table permissions
+  log('<br><b>测试2: messages 表权限</b>');
+  try {
+    var r = await api('messages?select=id&limit=1');
+    var text = await r.text();
+    log('  HTTP ' + r.status + '<br>');
+    if (r.status === 404 || text.includes('does not exist')) {
+      log('  <span class="err">❌ messages 表不存在！</span><br>');
+      log('  👉 请到 Supabase 控制台 → SQL Editor 执行建表 SQL<br>');
+      log('  <pre>CREATE TABLE messages (id BIGSERIAL PRIMARY KEY, room TEXT, type TEXT, data JSONB, sender TEXT, timestamp BIGINT);</pre>');
+    } else if (r.status === 401 || r.status === 403 || text.includes('permission denied')) {
+      log('  <span class="err">❌ 表权限不足！</span><br>');
+      log('  👉 请复制下面 SQL 到 SQL Editor 执行：<br>');
+      log('  <pre>GRANT SELECT, INSERT ON public.messages TO anon;\nGRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO anon;\nALTER TABLE messages ENABLE ROW LEVEL SECURITY;\nDROP POLICY IF EXISTS "Allow all" ON messages;\nCREATE POLICY "Allow all" ON messages FOR ALL USING (true) WITH CHECK (true);</pre>');
+    } else if (r.ok) {
+      log('  <span class="ok">✅ messages 表可读取</span>');
+    } else {
+      log('  <span class="err">❌ 未知错误</span><br>');
+      log('  响应: ' + text.substring(0, 300));
+    }
+  } catch(e) {
+    log('  <span class="err">❌ 请求失败: ' + e.message + '</span>');
+  }
+
+  // Test 3: Try to insert a test message
+  log('<br><b>测试3: 写入测试</b>');
+  try {
+    var r = await fetch(SUPABASE_URL + '/rest/v1/messages', {
+      method: 'POST',
+      headers: Object.assign({
+        'Content-Type': 'application/json',
+        'Prefer': 'return=representation'
+      }, HEADERS),
+      body: JSON.stringify({
+        room: 'TEST' + Date.now(),
+        type: 'test',
+        data: {},
+        sender: 'test',
+        timestamp: Date.now()
+      })
+    });
+    var text = await r.text();
+    log('  HTTP ' + r.status + '<br>');
+    if (r.ok) {
+      log('  <span class="ok">✅ 写入成功！Supabase 配置正确</span>');
+    } else if (r.status === 401 || r.status === 403 || text.includes('permission denied')) {
+      log('  <span class="err">❌ 写入权限不足</span><br>');
+      log('  👉 请复制下面 SQL 到 SQL Editor 执行：<br>');
+      log('  <pre>GRANT SELECT, INSERT ON public.messages TO anon;\nGRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO anon;\nALTER TABLE messages ENABLE ROW LEVEL SECURITY;\nDROP POLICY IF EXISTS "Allow all" ON messages;\nCREATE POLICY "Allow all" ON messages FOR ALL USING (true) WITH CHECK (true);</pre>');
+    } else {
+      log('  <span class="err">❌ 写入失败</span><br>');
+      log('  响应: ' + text.substring(0, 300));
+    }
+  } catch(e) {
+    log('  <span class="err">❌ 请求失败: ' + e.message + '</span>');
+  }
+
+  log('<br>---- 诊断完成 ----');
+}
+</script>
+</body>
+</html>
