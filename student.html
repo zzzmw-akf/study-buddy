@@ -1,0 +1,1283 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>考研能量站 · 学习模式</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  background: linear-gradient(180deg, #fff8f0 0%, #fff0e8 40%, #ffe8d6 100%);
+  min-height: 100vh;
+  color: #4a3728;
+  -webkit-tap-highlight-color: transparent;
+}
+.page {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 20px 16px 60px;
+}
+
+/* Header */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+.logo {
+  font-size: 22px;
+  font-weight: 800;
+  color: #d4724a;
+  display: flex; align-items: center; gap: 8px;
+}
+.conn-status {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 12px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-weight: 600;
+}
+.conn-status.online {
+  background: #e8f5e9; color: #2e7d32;
+}
+.conn-status.offline {
+  background: #fce4ec; color: #c62828;
+}
+.conn-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+}
+.conn-status.connecting {
+  background: #fff3e0; color: #e65100;
+}
+.conn-status.connecting .conn-dot { background: #ff9800; animation: dotPulse 0.8s infinite; }
+@keyframes dotPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* Room */
+.room-bar {
+  background: rgba(255,255,255,0.7);
+  border-radius: 14px;
+  padding: 12px 16px;
+  margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(212,114,74,0.15);
+}
+.room-label { font-size: 12px; color: #8b6f5e; }
+.room-code { font-size: 22px; font-weight: 900; letter-spacing: 3px; color: #d4724a; }
+.room-copy {
+  background: #d4724a; color: #fff; border: none;
+  border-radius: 10px; padding: 8px 16px;
+  font-size: 13px; cursor: pointer; font-weight: 600;
+  transition: all 0.2s;
+}
+.room-copy:active { transform: scale(0.95); }
+
+/* Progress */
+.progress-section { margin-bottom: 22px; }
+.progress-label {
+  display: flex; justify-content: space-between;
+  font-size: 13px; color: #8b6f5e; margin-bottom: 6px;
+}
+.progress-bar-wrap {
+  height: 14px; background: rgba(212,114,74,0.12);
+  border-radius: 10px; overflow: hidden;
+}
+.progress-bar {
+  height: 100%; border-radius: 10px;
+  background: linear-gradient(90deg, #ffb088, #d4724a, #e8653c);
+  transition: width 0.4s cubic-bezier(0.34,1.56,0.64,1);
+  width: 0%;
+}
+.progress-empty {
+  text-align: center; font-size: 13px; color: #b8a090;
+  margin-top: 6px;
+}
+
+/* Goals */
+.goals-section { margin-bottom: 22px; }
+.goals-title {
+  font-size: 16px; font-weight: 700; margin-bottom: 12px;
+  display: flex; align-items: center; gap: 6px;
+}
+.goal-list { display: flex; flex-direction: column; gap: 8px; }
+.goal-item {
+  display: flex; align-items: center; gap: 10px;
+  background: rgba(255,255,255,0.8);
+  padding: 14px 16px; border-radius: 14px;
+  border: 1px solid rgba(212,114,74,0.08);
+  transition: all 0.25s;
+  cursor: pointer;
+}
+.goal-item:hover { border-color: rgba(212,114,74,0.25); }
+.goal-item.done {
+  opacity: 0.55; background: rgba(126,203,118,0.1);
+  border-color: rgba(126,203,118,0.3);
+}
+.goal-check {
+  width: 26px; height: 26px; border-radius: 50%;
+  border: 2px solid #d4c4b6; display: flex;
+  align-items: center; justify-content: center;
+  font-size: 14px; flex-shrink: 0;
+  transition: all 0.3s;
+}
+.goal-check.done {
+  background: #7ecb76; border-color: #7ecb76; color: #fff;
+}
+.goal-text {
+  flex: 1; font-size: 15px;
+  position: relative;
+}
+.goal-item.done .goal-text {
+  text-decoration: line-through; color: #b8a090;
+}
+.goal-del {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: none; border: none; color: #ccc;
+  font-size: 16px; cursor: pointer; display: flex;
+  align-items: center; justify-content: center;
+  transition: all 0.2s;
+}
+.goal-del:hover { color: #e57373; background: rgba(229,115,115,0.1); }
+
+.add-goal {
+  display: flex; gap: 8px; margin-top: 10px;
+}
+.add-goal input {
+  flex: 1; padding: 12px 16px; border-radius: 12px;
+  border: 1.5px solid rgba(212,114,74,0.2);
+  background: rgba(255,255,255,0.8); font-size: 14px;
+  outline: none; color: #4a3728;
+}
+.add-goal input:focus { border-color: #d4724a; }
+.add-goal button {
+  background: #d4724a; color: #fff; border: none;
+  border-radius: 12px; padding: 12px 20px;
+  font-size: 14px; font-weight: 700; cursor: pointer;
+  transition: all 0.2s;
+}
+.add-goal button:active { transform: scale(0.95); }
+
+/* SOS Button */
+.sos-area { text-align: center; margin: 28px 0 8px; }
+.sos-btn {
+  width: 100%;
+  padding: 22px 30px;
+  border: none;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #ffe0b2, #ffcc80);
+  color: #bf6c3d;
+  font-size: 20px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(212,114,74,0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: all 0.3s;
+  position: relative;
+  overflow: hidden;
+}
+.sos-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 20px;
+  border: 2px solid rgba(212,114,74,0.25);
+  animation: sosPulse 2s infinite;
+}
+@keyframes sosPulse {
+  0%, 100% { transform: scale(1); opacity: 0.5; }
+  50% { transform: scale(1.03); opacity: 1; }
+}
+.sos-btn:active { transform: scale(0.96); }
+.sos-hint {
+  font-size: 12px; color: #b8a090; margin-top: 6px;
+}
+
+/* SOS Overlay */
+.sos-overlay {
+  position: fixed; inset: 0; z-index: 100;
+  background: rgba(255,248,240,0.98);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.5s;
+  backdrop-filter: blur(20px);
+}
+.sos-overlay.active {
+  opacity: 1; pointer-events: all;
+}
+.sos-phase-text {
+  font-size: 22px; font-weight: 700;
+  color: #d4724a; margin-bottom: 30px;
+  text-align: center;
+  min-height: 60px;
+  transition: all 0.5s;
+}
+.sos-breathe-circle {
+  width: 200px; height: 200px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #ffe0b2 30%, #ffcc80 70%, #ffb74d 100%);
+  display: flex; align-items: center; justify-content: center;
+  transition: transform 0.1s linear;
+  box-shadow: 0 0 60px rgba(212,114,74,0.2);
+}
+.sos-breathe-text {
+  font-size: 18px; font-weight: 700; color: #bf6c3d;
+}
+.sos-timer {
+  font-size: 48px; font-weight: 900; color: #d4724a;
+  margin-top: 20px; font-variant-numeric: tabular-nums;
+}
+.sos-cancel {
+  margin-top: 30px; background: none;
+  border: 1.5px solid rgba(212,114,74,0.3);
+  color: #b09080; padding: 10px 30px;
+  border-radius: 25px; font-size: 14px; cursor: pointer;
+  transition: all 0.2s;
+}
+.sos-cancel:hover { border-color: #d4724a; color: #d4724a; }
+
+/* Floating hearts on goal complete */
+.float-heart {
+  position: fixed; z-index: 50; pointer-events: none;
+  font-size: 28px; animation: heartFloat 1.2s ease-out forwards;
+}
+@keyframes heartFloat {
+  0% { transform: translateY(0) scale(0.5); opacity: 1; }
+  100% { transform: translateY(-120px) scale(1.3) rotate(15deg); opacity: 0; }
+}
+
+/* Encourage toast */
+.encourage-toast {
+  position: fixed; top: 20px; left: 50%;
+  transform: translateX(-50%) translateY(-120px);
+  z-index: 80; background: rgba(255,255,255,0.95);
+  padding: 14px 24px; border-radius: 30px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.1);
+  font-size: 15px; font-weight: 600; color: #d4724a;
+  transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1);
+  max-width: 90%; text-align: center;
+}
+.encourage-toast.show {
+  transform: translateX(-50%) translateY(0);
+}
+
+/* Responsive */
+@media (max-width: 400px) {
+  .logo { font-size: 18px; }
+  .sos-breathe-circle { width: 160px; height: 160px; }
+  .sos-timer { font-size: 38px; }
+}
+
+/* Learning records */
+.records-card {
+  background: rgba(255,255,255,0.75);
+  border-radius: 16px; padding: 14px; margin-bottom: 18px;
+  border: 1px solid rgba(212,114,74,0.1);
+  backdrop-filter: blur(10px);
+}
+.records-header {
+  display: flex; justify-content: space-between; align-items: center;
+  cursor: pointer;
+}
+.records-title {
+  font-size: 15px; font-weight: 700; color: #4a3728;
+  display: flex; align-items: center; gap: 6px;
+}
+.records-arrow {
+  font-size: 12px; color: #b8a090; transition: transform 0.3s;
+}
+.records-card.open .records-arrow { transform: rotate(180deg); }
+.records-list {
+  margin-top: 10px; display: none;
+  max-height: 200px; overflow-y: auto;
+}
+.records-card.open .records-list { display: block; }
+.records-item {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 8px 0; border-bottom: 1px solid rgba(0,0,0,0.04);
+  font-size: 13px; color: #5a4030;
+}
+.records-item:last-child { border-bottom: none; }
+.records-item-time { color: #8b6f5e; font-size: 12px; }
+.records-item-dur { color: #d4724a; font-weight: 700; font-size: 13px; }
+.records-empty { color: #b8a090; font-size: 12px; text-align: center; padding: 10px; }
+
+/* History */
+.history-card {
+  background: rgba(255,255,255,0.75);
+  border-radius: 16px; padding: 14px; margin-bottom: 18px;
+  border: 1px solid rgba(212,114,74,0.1);
+  backdrop-filter: blur(10px);
+}
+.history-header {
+  display: flex; justify-content: space-between; align-items: center;
+  cursor: pointer;
+}
+.history-title {
+  font-size: 15px; font-weight: 700; color: #4a3728;
+  display: flex; align-items: center; gap: 6px;
+}
+.history-count {
+  font-size: 12px; color: #b8a090; font-weight: 400;
+}
+.history-arrow {
+  font-size: 12px; color: #b8a090; transition: transform 0.3s;
+}
+.history-card.open .history-arrow { transform: rotate(180deg); }
+.history-list {
+  margin-top: 10px; display: none;
+  max-height: 360px; overflow-y: auto;
+}
+.history-card.open .history-list { display: block; }
+.history-day {
+  background: rgba(255,255,255,0.6); border-radius: 12px;
+  padding: 12px; margin-bottom: 8px;
+  border: 1px solid rgba(212,114,74,0.06);
+  cursor: pointer; transition: all 0.2s;
+}
+.history-day:hover { border-color: rgba(212,114,74,0.2); }
+.history-day:last-child { margin-bottom: 0; }
+.history-day-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 6px;
+}
+.history-date {
+  font-size: 14px; font-weight: 700; color: #4a3728;
+}
+.history-date-sub {
+  font-size: 11px; color: #b8a090; font-weight: 400; margin-left: 4px;
+}
+.history-expand {
+  font-size: 11px; color: #b8a090; transition: transform 0.2s;
+}
+.history-day.open .history-expand { transform: rotate(180deg); }
+.history-stats-row {
+  display: flex; gap: 14px; font-size: 12px; color: #8b6f5e;
+}
+.history-stat-dot { margin-right: 3px; }
+.history-detail {
+  margin-top: 8px; display: none;
+  border-top: 1px solid rgba(0,0,0,0.04);
+  padding-top: 8px;
+}
+.history-day.open .history-detail { display: block; }
+.history-goal-item {
+  font-size: 12px; padding: 4px 0; color: #5a4030;
+  display: flex; align-items: center; gap: 6px;
+}
+.history-goal-done { text-decoration: line-through; color: #b8a090; }
+.history-empty { color: #b8a090; font-size: 12px; text-align: center; padding: 10px; }
+
+/* P2P connection help */
+.help-bar {
+  background: rgba(255,255,255,0.6);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  font-size: 12px;
+  color: #8b6f5e;
+  text-align: center;
+  border: 1px dashed rgba(212,114,74,0.2);
+}
+.help-bar a { color: #d4724a; }
+
+/* Timer */
+.timer-card {
+  background: linear-gradient(135deg, rgba(255,255,255,0.85), rgba(255,248,240,0.9));
+  border-radius: 18px; padding: 18px; margin-bottom: 18px;
+  border: 1px solid rgba(212,114,74,0.15);
+  backdrop-filter: blur(10px);
+}
+.timer-card.running {
+  border-color: rgba(76,175,80,0.4);
+  box-shadow: 0 0 30px rgba(76,175,80,0.1);
+  animation: timerGlow 2s infinite;
+}
+@keyframes timerGlow {
+  0%, 100% { box-shadow: 0 0 20px rgba(76,175,80,0.08); }
+  50% { box-shadow: 0 0 40px rgba(76,175,80,0.18); }
+}
+.timer-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 12px;
+}
+.timer-label { font-size: 15px; font-weight: 700; color: #4a3728; display: flex; align-items: center; gap: 6px; }
+.timer-total { font-size: 12px; color: #8b6f5e; }
+.timer-display {
+  font-size: 44px; font-weight: 900; text-align: center;
+  color: #d4724a; font-variant-numeric: tabular-nums;
+  letter-spacing: 2px; margin-bottom: 12px;
+  transition: color 0.3s;
+}
+.timer-card.running .timer-display { color: #2e7d32; }
+.timer-row {
+  display: flex; gap: 10px; align-items: center;
+}
+.timer-btn {
+  flex: 1; padding: 14px; border-radius: 14px;
+  border: none; font-size: 16px; font-weight: 700;
+  cursor: pointer; transition: all 0.2s;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+}
+.timer-btn.start {
+  background: linear-gradient(135deg, #66bb6a, #43a047);
+  color: #fff; box-shadow: 0 4px 15px rgba(76,175,80,0.3);
+}
+.timer-btn.pause {
+  background: linear-gradient(135deg, #ffa726, #fb8c00);
+  color: #fff; box-shadow: 0 4px 15px rgba(255,167,38,0.3);
+}
+.timer-btn.reset {
+  background: rgba(0,0,0,0.04); color: #8b6f5e;
+  border: 1px solid rgba(0,0,0,0.08);
+}
+.timer-btn:active { transform: scale(0.96); }
+.timer-badge {
+  display: inline-block; background: #e8f5e9; color: #2e7d32;
+  font-size: 11px; padding: 2px 10px; border-radius: 10px;
+  font-weight: 700;
+}
+</style>
+</head>
+<body>
+
+<div class="page">
+  <!-- Header -->
+  <div class="header">
+    <div class="logo">📚 考研能量站</div>
+    <div class="conn-status offline" id="connStatus">
+      <div class="conn-dot"></div>
+      <span id="connText">等待连接</span>
+    </div>
+  </div>
+
+  <!-- Room -->
+  <div class="room-bar">
+    <div>
+      <div class="room-label">监督码（分享给对方）</div>
+      <div class="room-code" id="roomCode">------</div>
+    </div>
+    <button class="room-copy" id="copyBtn">📋 复制链接</button>
+  </div>
+
+  <!-- Learning Records -->
+  <div class="records-card" id="recordsCard">
+    <div class="records-header" id="recordsHeader">
+      <span class="records-title">📋 今日学习记录</span>
+      <span class="records-arrow">▼</span>
+    </div>
+    <div class="records-list" id="recordsList">
+      <div class="records-empty">还没有学习记录，开始计时吧 ⏱️</div>
+    </div>
+  </div>
+
+  <!-- History -->
+  <div class="history-card" id="historyCard">
+    <div class="history-header" id="historyHeader">
+      <span class="history-title">📅 学习日历 <span class="history-count" id="historyCount"></span></span>
+      <span class="history-arrow">▼</span>
+    </div>
+    <div class="history-list" id="historyList">
+      <div class="history-empty">还没有历史记录</div>
+    </div>
+  </div>
+
+  <!-- P2P Help -->
+  <div class="help-bar" id="helpBar">
+    ⚠️ 还没连上？<a href="#" id="retryLink">重试</a> · <a href="#" id="reconnectLink">强制重连</a>
+    <br><small style="opacity:0.7">Supabase 云端中继 · 全球 CDN · 标准 HTTPS+WSS</small>
+  </div>
+
+  <!-- Timer -->
+  <div class="timer-card" id="timerCard">
+    <div class="timer-header">
+      <span class="timer-label">⏱️ 学习计时</span>
+      <span class="timer-total" id="timerTotalText">今日累计 0分钟</span>
+    </div>
+    <div class="timer-display" id="timerDisplay">00:00:00</div>
+    <div class="timer-row">
+      <button class="timer-btn start" id="timerToggle">▶ 开始学习</button>
+      <button class="timer-btn reset" id="timerReset" style="display:none">↺ 重置</button>
+    </div>
+  </div>
+
+  <!-- Progress -->
+  <div class="progress-section">
+    <div class="progress-label">
+      <span>📊 今日进度</span>
+      <span id="progressText">0 / 0</span>
+    </div>
+    <div class="progress-bar-wrap">
+      <div class="progress-bar" id="progressBar"></div>
+    </div>
+    <div class="progress-empty" id="progressEmpty">还没有目标，添加今天的任务吧 ✨</div>
+  </div>
+
+  <!-- Goals -->
+  <div class="goals-section">
+    <div class="goals-title">📝 今日目标</div>
+    <div class="goal-list" id="goalList"></div>
+    <div class="add-goal">
+      <input type="text" id="goalInput" placeholder="输入任务，比如：数学第三章…" maxlength="40">
+      <button id="addBtn">➕ 添加</button>
+    </div>
+  </div>
+
+  <!-- SOS -->
+  <div class="sos-area">
+    <button class="sos-btn" id="sosBtn">
+      <span>🆘</span><span>我又多想了</span>
+    </button>
+    <div class="sos-hint">点这里，给你 2 分钟的安抚</div>
+  </div>
+</div>
+
+<!-- SOS Overlay -->
+<div class="sos-overlay" id="sosOverlay">
+  <div class="sos-phase-text" id="sosPhase">先停下来<br>什么都别想</div>
+  <div class="sos-breathe-circle" id="sosCircle">
+    <span class="sos-breathe-text" id="sosBreatheText">🫁</span>
+  </div>
+  <div class="sos-timer" id="sosTimer">2:00</div>
+  <button class="sos-cancel" id="sosCancel">我不想做了</button>
+</div>
+
+<!-- Encourage Toast -->
+<div class="encourage-toast" id="encourageToast"></div>
+
+<!-- Supabase SDK (全球 CDN · 标准 HTTPS 443 · 无需登录) -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script>
+
+<script>
+(function() {
+const $ = s => document.querySelector(s);
+
+// ---- State ----
+let goals = JSON.parse(localStorage.getItem('sb_goals') || '[]');
+let sosCount = parseInt(localStorage.getItem('sb_sos_today') || '0');
+let lastDate = localStorage.getItem('sb_date');
+const today = new Date().toDateString();
+
+if (lastDate !== today) {
+  // Save previous day's record before clearing
+  saveDailyRecord(lastDate);
+  goals = [];
+  sosCount = 0;
+  localStorage.setItem('sb_goals', '[]');
+  localStorage.setItem('sb_sos_today', '0');
+  localStorage.setItem('sb_date', today);
+  // Reset timer for new day
+  localStorage.removeItem('sb_timer_state');
+  localStorage.removeItem('sb_timer_sessions');
+}
+
+// ---- Timer ----
+let timerState = JSON.parse(localStorage.getItem('sb_timer_state') || '{"status":"idle","accumulatedMs":0,"sessionStart":null}');
+let timerSessions = JSON.parse(localStorage.getItem('sb_timer_sessions') || '[]');
+let timerInterval = null;
+
+function saveTimer() {
+  localStorage.setItem('sb_timer_state', JSON.stringify(timerState));
+  localStorage.setItem('sb_timer_sessions', JSON.stringify(timerSessions));
+  renderRecords();
+}
+
+function renderRecords() {
+  const list = $('#recordsList');
+  if (!timerSessions || timerSessions.length === 0) {
+    list.innerHTML = '<div class="records-empty">还没有学习记录，开始计时吧 ⏱️</div>';
+    return;
+  }
+  list.innerHTML = timerSessions.slice().reverse().map(sess => {
+    const st = new Date(sess.start).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+    const et = new Date(sess.end).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+    const durS = Math.floor(sess.duration / 1000);
+    const durM = Math.floor(durS / 60);
+    const durR = durS % 60;
+    return `<div class="records-item">
+      <span class="records-item-time">${st} → ${et}</span>
+      <span class="records-item-dur">${durM}分${durR}秒</span>
+    </div>`;
+  }).join('');
+}
+
+function getCurrentMs() {
+  let total = timerState.accumulatedMs;
+  if (timerState.status === 'running' && timerState.sessionStart) {
+    total += Date.now() - timerState.sessionStart;
+  }
+  return total;
+}
+
+function fmtMs(ms) {
+  const s = Math.floor(ms / 1000);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
+}
+
+function fmtShort(ms) {
+  const s = Math.floor(ms / 1000);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  if (h > 0) return `${h}小时${m}分钟`;
+  return `${m}分钟`;
+}
+
+function updateTimerUI() {
+  const ms = getCurrentMs();
+  $('#timerDisplay').textContent = fmtMs(ms);
+  $('#timerTotalText').textContent = '今日累计 ' + fmtShort(timerState.accumulatedMs);
+
+  const card = $('#timerCard');
+  const btn = $('#timerToggle');
+  const rst = $('#timerReset');
+
+  if (timerState.status === 'running') {
+    card.classList.add('running');
+    btn.textContent = '⏸ 暂停';
+    btn.className = 'timer-btn pause';
+    rst.style.display = 'none';
+  } else if (timerState.status === 'paused') {
+    card.classList.remove('running');
+    btn.textContent = '▶ 继续学习';
+    btn.className = 'timer-btn start';
+    rst.style.display = '';
+  } else {
+    card.classList.remove('running');
+    btn.textContent = '▶ 开始学习';
+    btn.className = 'timer-btn start';
+    rst.style.display = timerState.accumulatedMs > 0 ? '' : 'none';
+    if (timerState.accumulatedMs === 0) {
+      $('#timerDisplay').textContent = '00:00:00';
+    }
+  }
+}
+
+function timerTick() {
+  if (timerState.status !== 'running') return;
+  updateTimerUI();
+  sendTimerUpdate();
+}
+
+function sendTimerUpdate() {
+  // CloudBase: don't send every second (API quota); 10s status sync handles it
+  // Still send immediately on start/pause/reset
+}
+
+function startTimer() {
+  timerState.status = 'running';
+  timerState.sessionStart = Date.now();
+  saveTimer();
+  updateTimerUI();
+  sendTimerUpdate();
+  send({ type: 'timer-start' });
+  timerInterval = setInterval(timerTick, 1000);
+}
+
+function pauseTimer() {
+  if (timerState.status !== 'running') return;
+  const elapsed = Date.now() - timerState.sessionStart;
+  timerState.accumulatedMs += elapsed;
+  // Save session
+  timerSessions.push({
+    start: timerState.sessionStart,
+    end: Date.now(),
+    duration: elapsed
+  });
+  if (timerSessions.length > 50) timerSessions.shift();
+  timerState.status = 'paused';
+  timerState.sessionStart = null;
+  saveTimer();
+  clearInterval(timerInterval);
+  timerInterval = null;
+  updateTimerUI();
+  sendTimerUpdate();
+  send({ type: 'timer-pause' });
+  saveTodaySnapshot();
+}
+
+function resetTimer() {
+  clearInterval(timerInterval);
+  timerInterval = null;
+  timerState = { status: 'idle', accumulatedMs: 0, sessionStart: null };
+  timerSessions = [];
+  saveTimer();
+  updateTimerUI();
+  sendTimerUpdate();
+  send({ type: 'timer-reset' });
+}
+
+function toggleTimer() {
+  if (timerState.status === 'running') {
+    pauseTimer();
+  } else {
+    startTimer();
+  }
+}
+
+// ---- History ----
+function saveDailyRecord(dateStr) {
+  if (!dateStr) dateStr = new Date().toDateString();
+  // Load existing history
+  let history = [];
+  try { history = JSON.parse(localStorage.getItem('sb_history') || '[]'); } catch(e) {}
+
+  // Load the data for that day (if it was a previous day, the data may have been cleared already)
+  // For the current day snapshot, we use live state
+  let dayGoals, daySessions, dayAccMs, daySOS;
+  if (dateStr === today) {
+    // Current day — use live state
+    dayGoals = goals;
+    daySessions = timerSessions;
+    dayAccMs = timerState.accumulatedMs;
+    daySOS = sosCount;
+  } else {
+    // Previous day — try to find from history (if already saved) or from old localStorage timestamp
+    // Since data is already cleared, we only save when we have it from lastDate
+    dayGoals = goals;
+    daySessions = timerSessions;
+    dayAccMs = timerState.accumulatedMs;
+    daySOS = sosCount;
+  }
+
+  // Don't save empty days
+  const hasGoals = dayGoals && dayGoals.length > 0;
+  const hasTime = dayAccMs > 0;
+  const hasSessions = daySessions && daySessions.length > 0;
+  if (!hasGoals && !hasTime && !hasSessions) return;
+
+  const dateKey = new Date(dateStr).toISOString().split('T')[0];
+
+  // Remove existing entry for same date
+  history = history.filter(h => h.date !== dateKey);
+
+  history.push({
+    date: dateKey,
+    goals: (dayGoals || []).map(g => ({ text: g.text, done: g.done })),
+    sessions: (daySessions || []).map(s => ({ start: s.start, end: s.end, duration: s.duration })),
+    totalMs: dayAccMs || 0,
+    sosCount: daySOS || 0
+  });
+
+  // Keep max 90 days
+  if (history.length > 90) history = history.slice(-90);
+
+  localStorage.setItem('sb_history', JSON.stringify(history));
+}
+
+function loadHistory() {
+  try { return JSON.parse(localStorage.getItem('sb_history') || '[]'); } catch(e) { return []; }
+}
+
+function renderHistory() {
+  const history = loadHistory();
+  const list = $('#historyList');
+  const count = $('#historyCount');
+  count.textContent = history.length > 0 ? `(${history.length}天)` : '';
+
+  if (history.length === 0) {
+    list.innerHTML = '<div class="history-empty">还没有历史记录，完成一天的学习后会自动保存 📝</div>';
+    return;
+  }
+
+  // Sort by date descending
+  history.sort((a, b) => b.date.localeCompare(a.date));
+
+  list.innerHTML = history.map((day, hi) => {
+    const d = new Date(day.date + 'T00:00:00');
+    const weekdays = ['周日','周一','周二','周三','周四','周五','周六'];
+    const dateStr = `${d.getMonth()+1}月${d.getDate()}日 ${weekdays[d.getDay()]}`;
+    const totalM = Math.floor((day.totalMs || 0) / 60000);
+    const doneCount = (day.goals || []).filter(g => g.done).length;
+    const totalGoals = (day.goals || []).length;
+
+    const goalsHtml = (day.goals || []).length > 0
+      ? day.goals.map(g => `
+        <div class="history-goal-item">
+          <span>${g.done ? '✅' : '⏳'}</span>
+          <span class="${g.done ? 'history-goal-done' : ''}">${esc(g.text)}</span>
+        </div>`).join('')
+      : '<div class="history-goal-item">📭 没有记录目标</div>';
+
+    return `<div class="history-day" data-hi="${hi}">
+      <div class="history-day-header">
+        <span class="history-date">${dateStr}<span class="history-date-sub">${day.date}</span></span>
+        <span class="history-expand">▼</span>
+      </div>
+      <div class="history-stats-row">
+        <span><span class="history-stat-dot">📝</span>${doneCount}/${totalGoals}</span>
+        <span><span class="history-stat-dot">⏱️</span>${totalM}分钟</span>
+        <span><span class="history-stat-dot">🆘</span>${day.sosCount || 0}次</span>
+      </div>
+      <div class="history-detail">${goalsHtml}</div>
+    </div>`;
+  }).join('');
+
+  // Add click handlers for expand
+  list.querySelectorAll('.history-day').forEach(el => {
+    el.addEventListener('click', function(e) {
+      // Don't toggle if clicking on an already-open detail
+      this.classList.toggle('open');
+    });
+  });
+}
+
+// Save snapshot periodically
+function saveTodaySnapshot() {
+  saveDailyRecord(today);
+  // Also send history to supervisor if connected
+  sendHistory();
+}
+
+function sendHistory() {
+  const history = loadHistory();
+  send({ type: 'history', data: history });
+}
+
+// ---- Supabase Realtime Connection ----
+// Supabase 实时数据库，走标准 HTTPS + WebSocket (443)
+// 手机 4G/5G/WiFi、电脑 宽带/有线/WiFi 通吃
+// 无需登录！anon key 直接读写
+var supabase = null;
+var channel = null;
+var connected = false;
+var myId = '';
+var myRole = 'student';
+var connectTimer = null;
+
+function generateId() {
+  var stored = localStorage.getItem('sb_peer_id');
+  if (!stored) {
+    var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    stored = '';
+    for (var i = 0; i < 6; i++) stored += chars[Math.floor(Math.random() * chars.length)];
+    localStorage.setItem('sb_peer_id', stored);
+  }
+  return stored;
+}
+
+function initAndConnect() {
+  if (!SUPABASE_URL || SUPABASE_URL === 'YOUR_SUPABASE_URL') {
+    $('#connText').textContent = '⚠️ 请先在 config.js 填入 Supabase 配置';
+    setStatus('offline');
+    return;
+  }
+
+  var params = new URLSearchParams(location.search);
+  var roomParam = params.get('room');
+  myId = roomParam ? roomParam.toUpperCase() : generateId();
+  $('#roomCode').textContent = myId;
+
+  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  connectSupabase();
+}
+
+function connectSupabase() {
+  setStatus('connecting');
+  $('#connText').textContent = '正在连接 Supabase…';
+  $('#helpBar').style.display = 'none';
+
+  if (channel) { try { supabase.removeChannel(channel); } catch(e) {}; channel = null; }
+  connected = false;
+
+  channel = supabase.channel('room-' + myId)
+    .on('postgres_changes', {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'messages',
+      filter: 'room=eq.' + myId
+    }, function(payload) {
+      var msg = payload.new;
+      if (msg.sender === myRole) return; // skip own messages
+      handleIncoming(msg);
+    })
+    .subscribe(function(status, err) {
+      if (status === 'SUBSCRIBED') {
+        connected = true;
+        console.log('Supabase: subscribed to room', myId);
+        setStatus('waiting');
+        $('#connText').textContent = '已连接 · 等待监督者加入';
+        $('#helpBar').style.display = 'none';
+        sendStatus();
+        sendHistory();
+      }
+      if (status === 'CHANNEL_ERROR') {
+        console.error('Supabase channel error:', err);
+        connected = false;
+        setStatus('offline');
+        $('#connText').textContent = '连接断开，3秒后重试…';
+        $('#helpBar').style.display = '';
+        clearTimeout(connectTimer);
+        connectTimer = setTimeout(connectSupabase, 3000);
+      }
+      if (status === 'CLOSED') {
+        connected = false;
+        setStatus('offline');
+        $('#connText').textContent = '连接断开，3秒后重试…';
+        $('#helpBar').style.display = '';
+        clearTimeout(connectTimer);
+        connectTimer = setTimeout(connectSupabase, 3000);
+      }
+    });
+}
+
+function send(msg) {
+  if (!connected || !supabase) return;
+  supabase.from('messages').insert({
+    room: myId,
+    type: msg.type,
+    data: msg.data || msg,
+    sender: myRole,
+    timestamp: Date.now()
+  }).then(function(res) {
+    if (res.error) console.error('Supabase send error:', res.error);
+  });
+}
+
+function setStatus(state) {
+  var el = $('#connStatus');
+  if (state === 'online') {
+    el.className = 'conn-status online';
+  } else if (state === 'connecting') {
+    el.className = 'conn-status connecting';
+  } else {
+    el.className = 'conn-status offline';
+  }
+}
+
+function handleIncoming(msg) {
+  switch (msg.type) {
+    case 'encourage':
+      showEncourage(msg.data.message || msg.message);
+      break;
+    case 'supervisor-online':
+      setStatus('online');
+      $('#connText').textContent = '✅ 监督者已在线';
+      $('#helpBar').style.display = 'none';
+      sendStatus();
+      sendHistory();
+      break;
+  }
+}
+
+function sendStatus() {
+  var ms = getCurrentMs();
+  var sessionStartStr = timerState.sessionStart
+    ? new Date(timerState.sessionStart).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+    : null;
+  send({
+    type: 'status',
+    data: {
+      goals: goals.map(function(g) { return { text: g.text, done: g.done }; }),
+      completed: goals.filter(function(g) { return g.done; }).length,
+      total: goals.length,
+      sosCount: sosCount,
+      timer: {
+        status: timerState.status,
+        currentMs: ms,
+        accumulatedMs: timerState.accumulatedMs,
+        sessionStart: timerState.sessionStart,
+        sessionStartStr: sessionStartStr,
+        sessions: timerSessions
+      }
+    }
+  });
+}
+
+// Periodic status sync — every 10s
+var statusSyncTimer = null;
+function startStatusSync() {
+  statusSyncTimer = setInterval(function() {
+    if (connected) sendStatus();
+  }, 10000);
+}
+window.addEventListener('load', function() { startStatusSync(); });
+
+// ---- Goals UI ----
+function renderGoals() {
+  const list = $('#goalList');
+  list.innerHTML = goals.length === 0
+    ? '<div style="color:#b8a090;font-size:13px;text-align:center;padding:20px;">还没有目标，添加今天的任务吧 ✨</div>'
+    : goals.map((g, i) => `
+      <div class="goal-item${g.done ? ' done' : ''}" data-idx="${i}">
+        <div class="goal-check${g.done ? ' done' : ''}" data-action="toggle">${g.done ? '✓' : '○'}</div>
+        <div class="goal-text">${esc(g.text)}</div>
+        <button class="goal-del" data-action="del" title="删除">×</button>
+      </div>
+    `).join('');
+  updateProgress();
+  sendStatus();
+}
+
+function updateProgress() {
+  const done = goals.filter(g => g.done).length;
+  const total = goals.length;
+  $('#progressText').textContent = `${done} / ${total}`;
+  const pct = total === 0 ? 0 : (done / total * 100);
+  $('#progressBar').style.width = pct + '%';
+  $('#progressEmpty').style.display = total === 0 ? '' : 'none';
+}
+
+function addGoal(text) {
+  if (!text.trim()) return;
+  goals.push({ text: text.trim(), done: false });
+  localStorage.setItem('sb_goals', JSON.stringify(goals));
+  renderGoals();
+  saveTodaySnapshot();
+}
+
+function toggleGoal(idx) {
+  const wasDone = goals[idx].done;
+  goals[idx].done = !goals[idx].done;
+  localStorage.setItem('sb_goals', JSON.stringify(goals));
+  renderGoals();
+  saveTodaySnapshot();
+
+  if (!wasDone && goals[idx].done) {
+    // Spawn heart
+    const el = document.createElement('div');
+    el.className = 'float-heart';
+    el.textContent = ['💖','✨','🌟','💪','🎉'][Math.floor(Math.random()*5)];
+    el.style.left = (20 + Math.random() * 60) + '%';
+    el.style.top = (40 + Math.random() * 20) + '%';
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 1200);
+
+    // Notify supervisor
+    send({
+      type: 'goal-complete',
+      data: { goalIndex: idx, text: goals[idx].text, completed: goals.filter(g => g.done).length, total: goals.length }
+    });
+
+    // All done
+    if (goals.every(g => g.done)) {
+      setTimeout(() => showEncourage('🎉 今天的目标全部完成了！你好棒！'), 500);
+    }
+  }
+}
+
+function deleteGoal(idx) {
+  goals.splice(idx, 1);
+  localStorage.setItem('sb_goals', JSON.stringify(goals));
+  renderGoals();
+  saveTodaySnapshot();
+}
+
+function esc(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ---- SOS ----
+let sosActive = false;
+let sosTimer = null;
+let sosSeconds = 0;
+let breatheAnimFrame = null;
+let sosPhaseSent = false;
+
+function startSOS() {
+  if (sosActive) return;
+  sosActive = true;
+  sosSeconds = 120;
+  sosPhaseSent = false;
+  sosCount++;
+
+  // Auto-pause timer if running
+  if (timerState.status === 'running') {
+    pauseTimer();
+  }
+  localStorage.setItem('sb_sos_today', sosCount);
+
+  $('#sosOverlay').classList.add('active');
+  $('#sosTimer').textContent = '2:00';
+  $('#sosPhase').innerHTML = '先停下来<br>什么都别想';
+  $('#sosBreatheText').textContent = '🫁';
+
+  send({ type: 'sos' });
+  sendStatus();
+
+  // Start timer
+  sosTimer = setInterval(() => {
+    sosSeconds--;
+    const m = Math.floor(sosSeconds / 60);
+    const s = sosSeconds % 60;
+    $('#sosTimer').textContent = m + ':' + String(s).padStart(2, '0');
+
+    if (sosSeconds < 90 && !sosPhaseSent) {
+      sosPhaseSent = true;
+      $('#sosPhase').innerHTML = '跟着圆圈呼吸<br>吸…呼…';
+    }
+    if (sosSeconds < 30) {
+      $('#sosPhase').innerHTML = '要不要<br>只做一道题就停？';
+    }
+
+    if (sosSeconds <= 0) endSOS();
+  }, 1000);
+
+  breatheCycle();
+}
+
+function breatheCycle() {
+  if (!sosActive) return;
+  const elapsed = (120 - sosSeconds) * 1000;
+  const cycleLen = 8000;
+  const phaseInCycle = (elapsed % cycleLen) / cycleLen;
+  const scale = 0.6 + 0.4 * Math.sin(phaseInCycle * Math.PI);
+
+  $('#sosCircle').style.transform = `scale(${scale})`;
+  $('#sosBreatheText').textContent = phaseInCycle < 0.5 ? '吸' : '呼';
+
+  breatheAnimFrame = requestAnimationFrame(() => breatheCycle());
+}
+
+function endSOS() {
+  sosActive = false;
+  clearInterval(sosTimer);
+  cancelAnimationFrame(breatheAnimFrame);
+  $('#sosOverlay').classList.remove('active');
+  $('#sosCircle').style.transform = 'scale(1)';
+
+  send({ type: 'sos-end' });
+}
+
+function cancelSOS() {
+  sosActive = false;
+  clearInterval(sosTimer);
+  cancelAnimationFrame(breatheAnimFrame);
+  $('#sosOverlay').classList.remove('active');
+  $('#sosCircle').style.transform = 'scale(1)';
+  sosCount = Math.max(0, sosCount - 1);
+  localStorage.setItem('sb_sos_today', sosCount);
+
+  send({ type: 'sos-cancel' });
+  sendStatus();
+}
+
+// ---- Encourage Toast ----
+let toastTimer = null;
+function showEncourage(msg) {
+  const toast = $('#encourageToast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('show'), 3500);
+}
+
+// ---- Events ----
+$('#goalList').addEventListener('click', (e) => {
+  const item = e.target.closest('.goal-item');
+  if (!item) return;
+  const idx = parseInt(item.dataset.idx);
+  if (e.target.closest('[data-action="toggle"]')) toggleGoal(idx);
+  if (e.target.closest('[data-action="del"]')) deleteGoal(idx);
+});
+
+$('#addBtn').addEventListener('click', () => {
+  const input = $('#goalInput');
+  addGoal(input.value);
+  input.value = '';
+});
+
+$('#goalInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    addGoal($('#goalInput').value);
+    $('#goalInput').value = '';
+  }
+});
+
+$('#sosBtn').addEventListener('click', startSOS);
+$('#sosCancel').addEventListener('click', cancelSOS);
+$('#sosOverlay').addEventListener('click', (e) => {
+  if (e.target === $('#sosOverlay')) endSOS();
+});
+
+$('#timerToggle').addEventListener('click', toggleTimer);
+$('#timerReset').addEventListener('click', () => {
+  if (confirm('确定要重置今天的计时记录吗？')) resetTimer();
+});
+
+$('#copyBtn').addEventListener('click', () => {
+  // Share the supervisor URL with room code
+  const url = `${location.origin}/?room=${myId}`;
+  navigator.clipboard.writeText(url).then(() => {
+    const btn = $('#copyBtn');
+    btn.textContent = '✅ 已复制！';
+    setTimeout(() => { btn.textContent = '📋 复制链接'; }, 2000);
+  }).catch(() => {
+    prompt('复制这个链接发给监督人：', url);
+  });
+});
+
+$('#retryLink').addEventListener('click', function(e) {
+  e.preventDefault();
+  connectSupabase();
+});
+
+$('#reconnectLink').addEventListener('click', function(e) {
+  e.preventDefault();
+  if (channel) { try { supabase.removeChannel(channel); } catch(e) {} }
+  connectSupabase();
+});
+});
+
+$('#recordsHeader').addEventListener('click', () => {
+  $('#recordsCard').classList.toggle('open');
+});
+
+$('#historyHeader').addEventListener('click', () => {
+  $('#historyCard').classList.toggle('open');
+  if ($('#historyCard').classList.contains('open')) renderHistory();
+});
+
+// Handle page visibility — refresh timer and reconnect on return
+document.addEventListener('visibilitychange', function() {
+  if (!document.hidden) {
+    if (timerState.status === 'running') {
+      updateTimerUI();
+      sendTimerUpdate();
+    }
+    // Supabase channel handles reconnection automatically. Just send fresh status.
+    if (connected) {
+      sendStatus();
+    }
+  }
+});
+
+// ---- Init ----
+renderGoals();
+initAndConnect();
+updateTimerUI();
+renderRecords();
+renderHistory();
+
+// Save snapshot on page close
+window.addEventListener('beforeunload', () => saveTodaySnapshot());
+
+// If timer was running when page loaded, restart the tick
+if (timerState.status === 'running') {
+  timerInterval = setInterval(timerTick, 1000);
+}
+
+// Show help after 20 seconds if no supervisor connected
+setTimeout(function() {
+  if (!connected) {
+    $('#helpBar').style.display = '';
+  }
+}, 20000);
+})();
+</script>
+</body>
+</html>
