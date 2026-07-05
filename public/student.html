@@ -495,7 +495,7 @@ body {
   <!-- P2P Help -->
   <div class="help-bar" id="helpBar">
     ⚠️ 还没连上？<a href="#" id="retryLink">重试</a> · <a href="#" id="reconnectLink">强制重连</a>
-    <br><small style="opacity:0.7">LeanCloud 云端中继 · 国内服务器 · 标准 HTTPS</small>
+    <br><small style="opacity:0.7">CloudBase 云端中继 · 腾讯云国内服务器 · 标准 HTTPS</small>
   </div>
 
   <!-- Timer -->
@@ -555,8 +555,8 @@ body {
 <!-- Encourage Toast -->
 <div class="encourage-toast" id="encourageToast"></div>
 
-<!-- LeanCloud SDK (国内实时数据库) -->
-<script src="https://cdn.jsdelivr.net/npm/leancloud-storage@4.15.2/dist/av-min.js"></script>
+<!-- CloudBase SDK (腾讯云开发 · 国内服务器 · 标准 HTTPS) -->
+<script src="https://static.cloudbase.net/cloudbase-js-sdk/latest/cloudbase.full.js"></script>
 <script src="config.js"></script>
 
 <script>
@@ -673,7 +673,7 @@ function timerTick() {
 }
 
 function sendTimerUpdate() {
-  // LeanCloud: don't send every second (API quota); 10s status sync handles it
+  // CloudBase: don't send every second (API quota); 10s status sync handles it
   // Still send immediately on start/pause/reset
 }
 
@@ -847,26 +847,35 @@ function sendHistory() {
   send({ type: 'history', data: history });
 }
 
-// ---- LeanCloud LiveQuery Connection ----
-// 利用 LeanCloud 国内实时数据库，走标准 HTTPS 443 端口
+// ---- CloudBase Connection ----
+// 腾讯云开发实时数据库，走标准 HTTPS 443 端口
 // 手机 4G/5G/WiFi、电脑 宽带/有线/WiFi 通吃
-var subscription = null;
+var app = null;
+var db = null;
+var watcher = null;
 var connected = false;
+var myId = '';
 var myRole = 'student';
 var connectTimer = null;
+var skipInitData = true;  // skip initial snapshot data
+
+function generateId() {
+  var stored = localStorage.getItem('sb_peer_id');
+  if (!stored) {
+    var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    stored = '';
+    for (var i = 0; i < 6; i++) stored += chars[Math.floor(Math.random() * chars.length)];
+    localStorage.setItem('sb_peer_id', stored);
+  }
+  return stored;
+}
 
 function initAndConnect() {
-  if (!LC_APP_ID || LC_APP_ID === 'YOUR_APP_ID') {
-    $('#connText').textContent = '⚠️ 请先在 config.js 填入 LeanCloud 凭据';
+  if (!TCB_ENV_ID || TCB_ENV_ID === 'YOUR_ENV_ID') {
+    $('#connText').textContent = '⚠️ 请先在 config.js 填入 CloudBase 环境 ID';
     setStatus('offline');
     return;
   }
-
-  AV.init({
-    appId: LC_APP_ID,
-    appKey: LC_APP_KEY,
-    serverURL: LC_SERVER_URL
-  });
 
   // Check URL params first, fall back to generated ID
   var params = new URLSearchParams(location.search);
@@ -874,63 +883,87 @@ function initAndConnect() {
   myId = roomParam ? roomParam.toUpperCase() : generateId();
   $('#roomCode').textContent = myId;
 
-  connectLC();
+  app = cloudbase.init({ env: TCB_ENV_ID, region: TCB_REGION });
+  db = app.database();
+
+  connectTCB();
 }
 
-function connectLC() {
+function connectTCB() {
   setStatus('connecting');
-  $('#connText').textContent = '正在连接 LeanCloud…';
+  $('#connText').textContent = '正在连接 CloudBase…';
   $('#helpBar').style.display = 'none';
 
-  if (subscription) {
-    try { subscription.unsubscribe(); } catch(e) {}
-    subscription = null;
-  }
+  if (watcher) { try { watcher.close(); } catch(e) {}; watcher = null; }
   connected = false;
+  skipInitData = true;
 
-  var query = new AV.Query('Message');
-  query.equalTo('room', myId);
-  query.addDescending('createdAt');
-
-  query.subscribe().then(function(sub) {
-    subscription = sub;
+  // Step 1: Anonymous login
+  app.auth().anonymousAuthProvider().signIn().then(function() {
+    console.log('CloudBase: logged in anonymously');
+  }).catch(function(err) {
+    console.log('CloudBase login error (may already be logged in):', err.message);
+  }).then(function() {
+    // Step 2: Start watching for supervisor messages
+    return new Promise(function(resolve, reject) {
+      watcher = db.collection('messages')
+        .where({ room: myId })
+        .orderBy('timestamp', 'asc')
+        .watch({
+          onChange: function(snapshot) {
+            if (skipInitData) {
+              // First snapshot is init data - skip it
+              skipInitData = false;
+              if (!connected) resolve(); // mark as connected after init
+              return;
+            }
+            // Process only new additions
+            if (snapshot.docChanges) {
+              snapshot.docChanges.forEach(function(change) {
+                if (change.queueType === 'enqueue' && change.doc) {
+                  var msg = change.doc;
+                  if (msg.sender === myRole) return; // skip own messages
+                  handleIncoming(msg);
+                }
+              });
+            }
+          },
+          onError: function(err) {
+            console.error('CloudBase watch error:', err);
+          }
+        });
+    });
+  }).then(function() {
     connected = true;
-    console.log('LeanCloud subscribed to room:', myId);
+    console.log('CloudBase: watching room', myId);
     setStatus('waiting');
     $('#connText').textContent = '已连接 · 等待监督者加入';
     $('#helpBar').style.display = 'none';
-
-    sub.on('create', function(obj) {
-      var msg = obj.toJSON();
-      if (msg.sender === myRole) return;
-      handleIncoming(msg);
-    });
 
     // Send initial status
     sendStatus();
     sendHistory();
   }).catch(function(err) {
-    console.error('LeanCloud error:', err);
+    console.error('CloudBase error:', err);
     connected = false;
     setStatus('offline');
     $('#connText').textContent = '连接失败，3秒后重试…';
     $('#helpBar').style.display = '';
     clearTimeout(connectTimer);
-    connectTimer = setTimeout(connectLC, 3000);
+    connectTimer = setTimeout(connectTCB, 3000);
   });
 }
 
 function send(msg) {
-  if (!connected) return;
-  var Message = AV.Object.extend('Message');
-  var m = new Message();
-  m.set('room', myId);
-  m.set('type', msg.type);
-  m.set('data', msg.data || msg);
-  m.set('sender', myRole);
-  m.set('timestamp', Date.now());
-  m.save().catch(function(err) {
-    console.error('LeanCloud save error:', err);
+  if (!connected || !db) return;
+  db.collection('messages').add({
+    room: myId,
+    type: msg.type,
+    data: msg.data || msg,
+    sender: myRole,
+    timestamp: Date.now()
+  }).catch(function(err) {
+    console.error('CloudBase send error:', err);
   });
 }
 
@@ -984,21 +1017,7 @@ function sendStatus() {
   });
 }
 
-// LeanCloud keepalive — resend presence every 30s
-setInterval(function() {
-  if (connected && subscription) {
-    // Send a lightweight heartbeat message to keep the subscription alive
-    var Presence = AV.Object.extend('Presence');
-    var p = new Presence();
-    p.set('room', myId);
-    p.set('role', myRole);
-    p.set('lastSeen', Date.now());
-    p.save().catch(function() {});
-    // Also send status periodically (every 10s instead of every 1s)
-  }
-}, 30000);
-
-// Periodic full status sync — every 10s instead of every 1s (save API quota)
+// Periodic status sync — every 10s
 var statusSyncTimer = null;
 function startStatusSync() {
   statusSyncTimer = setInterval(function() {
@@ -1223,13 +1242,13 @@ $('#copyBtn').addEventListener('click', () => {
 
 $('#retryLink').addEventListener('click', function(e) {
   e.preventDefault();
-  connectLC();
+  connectTCB();
 });
 
 $('#reconnectLink').addEventListener('click', function(e) {
   e.preventDefault();
-  if (subscription) { try { subscription.unsubscribe(); } catch(e) {} }
-  connectLC();
+  if (watcher) { try { watcher.close(); } catch(e) {} }
+  connectTCB();
 });
 });
 
@@ -1249,7 +1268,7 @@ document.addEventListener('visibilitychange', function() {
       updateTimerUI();
       sendTimerUpdate();
     }
-    // LeanCloud already handles reconnection. Just send fresh status.
+    // CloudBase's watch() handles reconnection automatically. Just send fresh status.
     if (connected) {
       sendStatus();
     }

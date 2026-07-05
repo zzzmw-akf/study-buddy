@@ -1,8 +1,9 @@
-// LeanCloud 配置
-// 1. 注册 https://leancloud.cn
-// 2. 创建应用（开发版免费）
-// 3. 进入「设置 → 应用 Keys」复制下面的值填入
+// CloudBase 配置
+// 1. 打开 https://console.cloud.tencent.com/tcb
+// 2. 微信/QQ 扫码登录，创建环境（选"按量付费"免费额度）
+// 3. 进入「环境设置」复制环境 ID 填入下方
+// 4. 进入「数据库」→ 新建集合 "messages" → 权限设为"所有用户可读写"
+// 5. 进入「身份认证」→ 登录方式 → 确保"匿名登录"已开启（默认开启）
 
-var LC_APP_ID = 'YOUR_APP_ID';
-var LC_APP_KEY = 'YOUR_APP_KEY';
-var LC_SERVER_URL = 'https://YOUR_API_DOMAIN.lncldapi.com';
+var TCB_ENV_ID = 'YOUR_ENV_ID';  // 你的 CloudBase 环境 ID，例如 'study-xxx'
+var TCB_REGION = 'ap-shanghai';  // 地域，默认上海

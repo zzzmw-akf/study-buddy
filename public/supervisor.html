@@ -366,7 +366,7 @@ body {
   <!-- Connecting -->
   <div class="connecting-indicator" id="connectingIndicator">
     ⏳ 正在连接中继服务器<span class="connecting-dots"></span>
-    <br><small style="opacity:0.7">LeanCloud 云端中继 · 国内服务器 · 标准 HTTPS</small>
+    <br><small style="opacity:0.7">CloudBase 云端中继 · 腾讯云国内服务器 · 标准 HTTPS</small>
   </div>
 
   <!-- Connection hint -->
@@ -458,8 +458,8 @@ body {
   </div>
 </div>
 
-<!-- LeanCloud SDK (国内实时数据库) -->
-<script src="https://cdn.jsdelivr.net/npm/leancloud-storage@4.15.2/dist/av-min.js"></script>
+<!-- CloudBase SDK (腾讯云开发 · 国内服务器 · 标准 HTTPS) -->
+<script src="https://static.cloudbase.net/cloudbase-js-sdk/latest/cloudbase.full.js"></script>
 <script src="config.js"></script>
 
 <script>
@@ -548,29 +548,31 @@ $('#soundBtn').addEventListener('click', () => {
   }
 });
 
-// ---- LeanCloud LiveQuery Connection ----
-// 利用 LeanCloud 国内实时数据库，走标准 HTTPS 443 端口
-var subscription = null;
+// ---- CloudBase Connection ----
+// 腾讯云开发实时数据库，走标准 HTTPS 443 端口
+var app = null;
+var db = null;
+var watcher = null;
 var connected = false;
+var room = '';
 var myRole = 'supervisor';
+var lastStatus = null;
 var connectTimer = null;
+var skipInitData = true;
 
 function initAndConnect() {
-  if (!LC_APP_ID || LC_APP_ID === 'YOUR_APP_ID') {
-    addLog('⚠️ 请先在 config.js 填入 LeanCloud 凭据');
+  if (!TCB_ENV_ID || TCB_ENV_ID === 'YOUR_ENV_ID') {
+    addLog('⚠️ 请先在 config.js 填入 CloudBase 环境 ID');
     return;
   }
 
-  AV.init({
-    appId: LC_APP_ID,
-    appKey: LC_APP_KEY,
-    serverURL: LC_SERVER_URL
-  });
+  app = cloudbase.init({ env: TCB_ENV_ID, region: TCB_REGION });
+  db = app.database();
 
-  connectLC();
+  connectTCB();
 }
 
-function connectLC() {
+function connectTCB() {
   room = $('#roomInput').value.trim().toUpperCase();
   if (!room || room.length < 3) {
     $('#roomInput').placeholder = '请输入6位监督码';
@@ -581,43 +583,63 @@ function connectLC() {
   $('#joinBtn').disabled = true;
   $('#connectingIndicator').classList.add('show');
 
-  if (subscription) {
-    try { subscription.unsubscribe(); } catch(e) {}
-    subscription = null;
-  }
+  if (watcher) { try { watcher.close(); } catch(e) {}; watcher = null; }
   connected = false;
+  skipInitData = true;
 
-  var query = new AV.Query('Message');
-  query.equalTo('room', room);
-
-  query.subscribe().then(function(sub) {
-    subscription = sub;
-    connected = true;
-    console.log('LeanCloud subscribed to room:', room);
-    $('#connectingIndicator').classList.remove('show');
-    $('#roomSection').style.display = 'none';
-    $('#dashboard').style.display = '';
-    $('#studentTag').textContent = '🟢 在线';
-    $('#studentTag').className = 'conn-tag online';
-    addLog('✅ 已连接！等待她的数据同步…');
-
-    sub.on('create', function(obj) {
-      var msg = obj.toJSON();
-      if (msg.sender === myRole) return;
-      handleIncoming(msg);
-    });
-
-    // Tell student we're online
-    send({ type: 'supervisor-online' });
+  // Step 1: Anonymous login
+  app.auth().anonymousAuthProvider().signIn().then(function() {
+    console.log('CloudBase: logged in as supervisor');
   }).catch(function(err) {
-    console.error('LeanCloud error:', err);
+    console.log('CloudBase login error:', err.message);
+  }).then(function() {
+    // Step 2: Start watching
+    return new Promise(function(resolve, reject) {
+      watcher = db.collection('messages')
+        .where({ room: room })
+        .orderBy('timestamp', 'asc')
+        .watch({
+          onChange: function(snapshot) {
+            if (skipInitData) {
+              skipInitData = false;
+              if (!connected) {
+                connected = true;
+                resolve();
+                console.log('CloudBase: watching room', room);
+                $('#connectingIndicator').classList.remove('show');
+                $('#roomSection').style.display = 'none';
+                $('#dashboard').style.display = '';
+                $('#studentTag').textContent = '🟢 在线';
+                $('#studentTag').className = 'conn-tag online';
+                addLog('✅ 已连接！等待她的数据同步…');
+                send({ type: 'supervisor-online' });
+              }
+              return;
+            }
+            if (snapshot.docChanges) {
+              snapshot.docChanges.forEach(function(change) {
+                if (change.queueType === 'enqueue' && change.doc) {
+                  var msg = change.doc;
+                  if (msg.sender === myRole) return;
+                  handleIncoming(msg);
+                }
+              });
+            }
+          },
+          onError: function(err) {
+            console.error('CloudBase watch error:', err);
+          }
+        });
+    });
+  }).catch(function(err) {
+    console.error('CloudBase error:', err);
     connected = false;
     $('#connectingIndicator').classList.remove('show');
     addLog('🔴 连接失败: ' + err.message + '，3秒后重试…');
     $('#roomInput').disabled = false;
     $('#joinBtn').disabled = false;
     clearTimeout(connectTimer);
-    connectTimer = setTimeout(connectLC, 3000);
+    connectTimer = setTimeout(connectTCB, 3000);
   });
 
   // Timeout
@@ -629,16 +651,15 @@ function connectLC() {
 }
 
 function send(msg) {
-  if (!connected) return;
-  var Message = AV.Object.extend('Message');
-  var m = new Message();
-  m.set('room', room);
-  m.set('type', msg.type);
-  m.set('data', msg.data || msg);
-  m.set('sender', myRole);
-  m.set('timestamp', Date.now());
-  m.save().catch(function(err) {
-    console.error('LeanCloud save error:', err);
+  if (!connected || !db) return;
+  db.collection('messages').add({
+    room: room,
+    type: msg.type,
+    data: msg.data || msg,
+    sender: myRole,
+    timestamp: Date.now()
+  }).catch(function(err) {
+    console.error('CloudBase send error:', err);
   });
 }
 
@@ -907,7 +928,7 @@ if (roomParam) {
 // Handle page visibility — reconnect when returning
 document.addEventListener('visibilitychange', function() {
   if (!document.hidden && room && !connected) {
-    console.log('Page visible, reconnecting LeanCloud...');
+    console.log('Page visible, reconnecting CloudBase...');
     $('#connectingIndicator').classList.add('show');
     initAndConnect();
   }
