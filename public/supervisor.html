@@ -236,6 +236,7 @@ body {
 // ========== Pure REST API helpers ==========
 var API_URL = SUPABASE_URL + '/rest/v1/';
 var HEADERS = {
+  'Accept': 'application/json',
   'Content-Type': 'application/json',
   'apikey': SUPABASE_ANON_KEY,
   'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
@@ -270,7 +271,7 @@ var myRole = 'supervisor';
 var connected = false;
 var lastStatus = null;
 var pollTimer = null;
-var lastMessageId = 0;
+var processedIds = {};  // 用对象代替 Set，兼容性更好
 
 // ========== Init ==========
 function initAndConnect() {
@@ -323,16 +324,31 @@ function initAndConnect() {
 // ========== Polling ==========
 function startPolling() {
   if (pollTimer) clearInterval(pollTimer);
+  // 首次连接时拉取最近30条消息（含历史），之后每次拉取全部该房间消息去重处理
+  api('messages?select=*&room=eq.' + encodeURIComponent(room) + '&sender=neq.supervisor&order=id.asc&limit=30', 'GET')
+    .then(function(msgs) {
+      msgs.forEach(function(msg) {
+        processedIds[msg.id] = true;
+        handleIncoming(msg);
+      });
+      addLog('✅ 已同步 ' + msgs.length + ' 条历史消息');
+    })
+    .catch(function(err) { addLog('⚠️ 首次同步失败: ' + (err.message || err)); });
+
   pollTimer = setInterval(function() {
     if (!connected) return;
-    api('messages?select=*&room=eq.' + encodeURIComponent(room) + '&sender=neq.supervisor&id=gt.' + lastMessageId + '&order=id.asc', 'GET')
+    api('messages?select=*&room=eq.' + encodeURIComponent(room) + '&sender=neq.supervisor&order=id.asc', 'GET')
       .then(function(msgs) {
         msgs.forEach(function(msg) {
-          if (msg.id > lastMessageId) lastMessageId = msg.id;
+          if (processedIds[msg.id]) return; // 已处理过，跳过
+          processedIds[msg.id] = true;
           handleIncoming(msg);
         });
       })
-      .catch(function(err) { console.error('Poll error:', err); });
+      .catch(function(err) {
+        console.error('Poll error:', err);
+        addLog('⚠️ 轮询错误: ' + (err.message || err));
+      });
   }, 2000);
 }
 
