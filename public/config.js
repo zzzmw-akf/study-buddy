@@ -5,5 +5,5 @@
 // 4. 进入「数据库」→ 新建集合 "messages" → 权限设为"所有用户可读写"
 // 5. 进入「身份认证」→ 登录方式 → 确保"匿名登录"已开启（默认开启）
 
-var TCB_ENV_ID = 'study-buddy-d2gtt7uwlb5236f62';  // CloudBase 环境 ID
+var TCB_ENV_ID = 'study-buddy-d8g0w5juxa4271c16';  // CloudBase 环境 ID
 var TCB_REGION = 'ap-shanghai';  // 地域，默认上海
