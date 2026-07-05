@@ -4,5 +4,5 @@
 // 3. Database → Replication → 开启 messages 表的 Realtime
 // 4. Settings → API → 复制 Project URL 和 anon public key 填入下方
 
-var SUPABASE_URL = 'YOUR_SUPABASE_URL';        // 例如 https://xxxxx.supabase.co
-var SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';  // 以 eyJ 开头的长字符串
+var SUPABASE_URL = 'https://jcsxmguhtrjjyrribbyh.supabase.co';
+var SUPABASE_ANON_KEY = 'sb_publishable_ay3caSve4TIvimb0uwyaYQ_WBa8EBKN';
