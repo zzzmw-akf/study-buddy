@@ -366,7 +366,7 @@ body {
   <!-- Connecting -->
   <div class="connecting-indicator" id="connectingIndicator">
     ⏳ 正在连接中继服务器<span class="connecting-dots"></span>
-    <br><small style="opacity:0.7">Firebase 云端中继 · Google 全球服务器 · 标准 HTTPS</small>
+    <br><small style="opacity:0.7">Supabase 云端中继 · 全球 CDN · 标准 HTTPS+WSS</small>
   </div>
 
   <!-- Connection hint -->
@@ -458,10 +458,8 @@ body {
   </div>
 </div>
 
-<!-- Firebase SDK (Google 全球 CDN · 标准 HTTPS 443) -->
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<!-- Supabase SDK (全球 CDN · 标准 HTTPS 443 · 无需登录) -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="config.js"></script>
 
 <script>
@@ -550,33 +548,29 @@ $('#soundBtn').addEventListener('click', () => {
   }
 });
 
-// ---- Firebase Connection ----
-// Firestore 实时数据库，走标准 HTTPS 443 端口
-// 无需配置安全域名、无需付费！
-var firestore = null;
-var auth = null;
-var unsubscribe = null;
+// ---- Supabase Realtime Connection ----
+// Supabase 实时数据库，走标准 HTTPS + WebSocket (443)
+// 无需登录！anon key 直接读写
+var supabase = null;
+var channel = null;
 var connected = false;
 var room = '';
 var myRole = 'supervisor';
 var lastStatus = null;
 var connectTimer = null;
-var skipInitData = true;
 
 function initAndConnect() {
-  if (!firebaseConfig || !firebaseConfig.apiKey || firebaseConfig.apiKey === 'YOUR_API_KEY') {
-    addLog('⚠️ 请先在 config.js 填入 Firebase 配置');
+  if (!SUPABASE_URL || SUPABASE_URL === 'YOUR_SUPABASE_URL') {
+    addLog('⚠️ 请先在 config.js 填入 Supabase 配置');
     return;
   }
 
-  firebase.initializeApp(firebaseConfig);
-  auth = firebase.auth();
-  firestore = firebase.firestore();
+  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  connectFirebase();
+  connectSupabase();
 }
 
-function connectFirebase() {
+function connectSupabase() {
   room = $('#roomInput').value.trim().toUpperCase();
   if (!room || room.length < 3) {
     $('#roomInput').placeholder = '请输入6位监督码';
@@ -587,65 +581,52 @@ function connectFirebase() {
   $('#joinBtn').disabled = true;
   $('#connectingIndicator').classList.add('show');
 
-  if (unsubscribe) { try { unsubscribe(); } catch(e) {}; unsubscribe = null; }
+  if (channel) { try { supabase.removeChannel(channel); } catch(e) {}; channel = null; }
   connected = false;
-  skipInitData = true;
 
-  auth.signInAnonymously().then(function() {
-    console.log('Firebase: logged in as supervisor');
-
-    // Start watching
-    unsubscribe = firestore.collection('messages')
-      .where('room', '==', room)
-      .orderBy('timestamp', 'asc')
-      .onSnapshot(function(snapshot) {
-        snapshot.docChanges().forEach(function(change) {
-          if (change.type === 'added') {
-            var msg = change.doc.data();
-            msg._id = change.doc.id;
-
-            if (skipInitData) {
-              // Still collecting initial snapshot
-              return;
-            }
-
-            if (msg.sender === myRole) return;
-            handleIncoming(msg);
-          }
-        });
-
-        if (skipInitData) {
-          skipInitData = false;
-          connected = true;
-          console.log('Firebase: watching room', room);
-          $('#connectingIndicator').classList.remove('show');
-          $('#roomSection').style.display = 'none';
-          $('#dashboard').style.display = '';
-          $('#studentTag').textContent = '🟢 在线';
-          $('#studentTag').className = 'conn-tag online';
-          addLog('✅ 已连接！等待她的数据同步…');
-          send({ type: 'supervisor-online' });
-        }
-      }, function(err) {
-        console.error('Firebase watch error:', err);
+  channel = supabase.channel('room-' + room)
+    .on('postgres_changes', {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'messages',
+      filter: 'room=eq.' + room
+    }, function(payload) {
+      var msg = payload.new;
+      if (msg.sender === myRole) return;
+      handleIncoming(msg);
+    })
+    .subscribe(function(status, err) {
+      if (status === 'SUBSCRIBED') {
+        connected = true;
+        console.log('Supabase: subscribed to room', room);
+        $('#connectingIndicator').classList.remove('show');
+        $('#roomSection').style.display = 'none';
+        $('#dashboard').style.display = '';
+        $('#studentTag').textContent = '🟢 在线';
+        $('#studentTag').className = 'conn-tag online';
+        addLog('✅ 已连接！等待她的数据同步…');
+        send({ type: 'supervisor-online' });
+      }
+      if (status === 'CHANNEL_ERROR') {
+        console.error('Supabase channel error:', err);
         connected = false;
         $('#connectingIndicator').classList.remove('show');
-        addLog('🔴 连接断开: ' + err.message + '，3秒后重试…');
+        addLog('🔴 连接断开，3秒后重试…');
         $('#roomInput').disabled = false;
         $('#joinBtn').disabled = false;
         clearTimeout(connectTimer);
-        connectTimer = setTimeout(connectFirebase, 3000);
-      });
-  }).catch(function(err) {
-    console.error('Firebase auth error:', err);
-    connected = false;
-    $('#connectingIndicator').classList.remove('show');
-    addLog('🔴 连接失败: ' + err.message + '，3秒后重试…');
-    $('#roomInput').disabled = false;
-    $('#joinBtn').disabled = false;
-    clearTimeout(connectTimer);
-    connectTimer = setTimeout(connectFirebase, 3000);
-  });
+        connectTimer = setTimeout(connectSupabase, 3000);
+      }
+      if (status === 'CLOSED') {
+        connected = false;
+        $('#connectingIndicator').classList.remove('show');
+        addLog('🔴 连接关闭，3秒后重试…');
+        $('#roomInput').disabled = false;
+        $('#joinBtn').disabled = false;
+        clearTimeout(connectTimer);
+        connectTimer = setTimeout(connectSupabase, 3000);
+      }
+    });
 
   // Timeout
   setTimeout(function() {
@@ -656,15 +637,15 @@ function connectFirebase() {
 }
 
 function send(msg) {
-  if (!connected || !firestore) return;
-  firestore.collection('messages').add({
+  if (!connected || !supabase) return;
+  supabase.from('messages').insert({
     room: room,
     type: msg.type,
     data: msg.data || msg,
     sender: myRole,
     timestamp: Date.now()
-  }).catch(function(err) {
-    console.error('Firebase send error:', err);
+  }).then(function(res) {
+    if (res.error) console.error('Supabase send error:', res.error);
   });
 }
 
@@ -933,7 +914,7 @@ if (roomParam) {
 // Handle page visibility — reconnect when returning
 document.addEventListener('visibilitychange', function() {
   if (!document.hidden && room && !connected) {
-    console.log('Page visible, reconnecting Firebase...');
+    console.log('Page visible, reconnecting Supabase...');
     $('#connectingIndicator').classList.add('show');
     initAndConnect();
   }

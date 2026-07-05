@@ -1,15 +1,8 @@
-// Firebase 配置
-// 1. 打开 https://console.firebase.google.com
-// 2. 创建项目 → 添加 Web 应用（</> 图标）
-// 3. 复制 firebaseConfig 对象，替换下方内容
-// 4. Firebase Console → Firestore Database → 创建数据库 → 选择"测试模式"（允许读写30天）
-// 5. Firebase Console → Authentication → 登录方式 → 启用"匿名"
+// Supabase 配置
+// 1. 打开 https://supabase.com → 用 GitHub 登录 → 创建项目
+// 2. 进入 SQL Editor → 粘贴 SUPABASE.md 中的建表 SQL 执行
+// 3. Database → Replication → 开启 messages 表的 Realtime
+// 4. Settings → API → 复制 Project URL 和 anon public key 填入下方
 
-var firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT.appspot.com",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID"
-};
+var SUPABASE_URL = 'YOUR_SUPABASE_URL';        // 例如 https://xxxxx.supabase.co
+var SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';  // 以 eyJ 开头的长字符串
