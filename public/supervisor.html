@@ -366,7 +366,7 @@ body {
   <!-- Connecting -->
   <div class="connecting-indicator" id="connectingIndicator">
     ⏳ 正在连接中继服务器<span class="connecting-dots"></span>
-    <br><small style="opacity:0.7">同源直连 · WSS加密 · 任何网络都能连</small>
+    <br><small style="opacity:0.7">LeanCloud 云端中继 · 国内服务器 · 标准 HTTPS</small>
   </div>
 
   <!-- Connection hint -->
@@ -458,7 +458,9 @@ body {
   </div>
 </div>
 
-<!-- WebSocket relay: no external library needed -->
+<!-- LeanCloud SDK (国内实时数据库) -->
+<script src="https://cdn.jsdelivr.net/npm/leancloud-storage@4.15.2/dist/av-min.js"></script>
+<script src="config.js"></script>
 
 <script>
 (function() {
@@ -546,17 +548,29 @@ $('#soundBtn').addEventListener('click', () => {
   }
 });
 
-// ---- WebSocket Connection ----
-// Same-origin WebSocket — works through any tunnel (ngrok/localtunnel)
-// No hardcoded URL! Uses the same host that served this page.
-var RELAY_URL = (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host;
-var ws = null;
-var wsConnected = false;
-var room = '';
-var lastStatus = null;
-var wsReconnectTimer = null;
+// ---- LeanCloud LiveQuery Connection ----
+// 利用 LeanCloud 国内实时数据库，走标准 HTTPS 443 端口
+var subscription = null;
+var connected = false;
+var myRole = 'supervisor';
+var connectTimer = null;
 
-function connect() {
+function initAndConnect() {
+  if (!LC_APP_ID || LC_APP_ID === 'YOUR_APP_ID') {
+    addLog('⚠️ 请先在 config.js 填入 LeanCloud 凭据');
+    return;
+  }
+
+  AV.init({
+    appId: LC_APP_ID,
+    appKey: LC_APP_KEY,
+    serverURL: LC_SERVER_URL
+  });
+
+  connectLC();
+}
+
+function connectLC() {
   room = $('#roomInput').value.trim().toUpperCase();
   if (!room || room.length < 3) {
     $('#roomInput').placeholder = '请输入6位监督码';
@@ -567,114 +581,113 @@ function connect() {
   $('#joinBtn').disabled = true;
   $('#connectingIndicator').classList.add('show');
 
-  if (ws) { try { ws.close(); } catch(e) {} }
+  if (subscription) {
+    try { subscription.unsubscribe(); } catch(e) {}
+    subscription = null;
+  }
+  connected = false;
 
-  var url = RELAY_URL + '/ws/' + room;
-  ws = new WebSocket(url);
+  var query = new AV.Query('Message');
+  query.equalTo('room', room);
 
-  ws.onopen = function() {
-    console.log('WebSocket connected to room:', room);
-    wsConnected = true;
+  query.subscribe().then(function(sub) {
+    subscription = sub;
+    connected = true;
+    console.log('LeanCloud subscribed to room:', room);
     $('#connectingIndicator').classList.remove('show');
     $('#roomSection').style.display = 'none';
     $('#dashboard').style.display = '';
     $('#studentTag').textContent = '🟢 在线';
     $('#studentTag').className = 'conn-tag online';
-    addLog('✅ 已连接中继！等待她的数据同步…');
+    addLog('✅ 已连接！等待她的数据同步…');
+
+    sub.on('create', function(obj) {
+      var msg = obj.toJSON();
+      if (msg.sender === myRole) return;
+      handleIncoming(msg);
+    });
+
     // Tell student we're online
     send({ type: 'supervisor-online' });
-  };
-
-  ws.onmessage = function(event) {
-    try {
-      var data = JSON.parse(event.data);
-      // Ignore welcome message from relay
-      if (data.type === 'welcome') {
-        if (data.peers > 0) {
-          addLog('👋 她已在线，等待数据同步…');
-        }
-        return;
-      }
-
-      switch (data.type) {
-        case 'status':
-          lastStatus = data.data;
-          updateDashboard(data.data);
-          break;
-        case 'goal-complete':
-          addLog('✅ 完成了：' + data.data.text);
-          if (data.data.completed >= data.data.total && data.data.total > 0) {
-            addLog('🎉 今日目标全部完成！');
-          }
-          break;
-        case 'sos':
-          playSOSAlert();
-          $('#sosBanner').classList.add('active');
-          $('#sosCard').classList.add('alert');
-          addLog('🆘 她按下了 SOS 按钮，正在冷静中…');
-          break;
-        case 'sos-end':
-          $('#sosBanner').classList.remove('active');
-          $('#sosCard').classList.remove('alert');
-          addLog('💚 SOS 结束，她回到了学习中');
-          break;
-        case 'sos-cancel':
-          $('#sosBanner').classList.remove('active');
-          $('#sosCard').classList.remove('alert');
-          addLog('↩️ 她取消了 SOS');
-          break;
-        case 'timer':
-          updateTimerUI(data.data);
-          break;
-        case 'timer-start':
-          addLog('▶️ 她开始了学习计时');
-          if (data.data) updateTimerUI(data.data);
-          break;
-        case 'timer-pause':
-          addLog('⏸ 她暂停了学习计时');
-          if (data.data) updateTimerUI(data.data);
-          break;
-        case 'timer-reset':
-          addLog('↺ 她重置了学习计时');
-          updateTimerUI({ status: 'idle', currentMs: 0, accumulatedMs: 0, sessionStart: null, sessionStartStr: null, sessions: [] });
-          break;
-        case 'history':
-          renderHistory(data.data);
-          break;
-      }
-    } catch(e) {}
-  };
-
-  ws.onclose = function() {
-    console.log('WebSocket closed');
-    wsConnected = false;
-    $('#studentTag').textContent = '🔴 离线';
-    $('#studentTag').className = 'conn-tag offline';
-    addLog('🔴 连接断开，3秒后自动重连…');
-    updateTimerUI({ status: 'idle', currentMs: 0, accumulatedMs: 0, sessionStart: null, sessionStartStr: null, sessions: [] });
-    $('#roomSection').style.display = '';
-    $('#dashboard').style.display = 'none';
+  }).catch(function(err) {
+    console.error('LeanCloud error:', err);
+    connected = false;
+    $('#connectingIndicator').classList.remove('show');
+    addLog('🔴 连接失败: ' + err.message + '，3秒后重试…');
     $('#roomInput').disabled = false;
     $('#joinBtn').disabled = false;
-    clearTimeout(wsReconnectTimer);
-    wsReconnectTimer = setTimeout(connect, 3000);
-  };
+    clearTimeout(connectTimer);
+    connectTimer = setTimeout(connectLC, 3000);
+  });
 
-  ws.onerror = function() {
-    // onclose will fire after onerror
-  };
-
-  // Timeout — if no student data in 30 seconds
+  // Timeout
   setTimeout(function() {
-    if (wsConnected && !lastStatus) {
-      addLog('⚠️ 已连接中继，但未收到她的数据。她打开学习页面了吗？');
+    if (connected && !lastStatus) {
+      addLog('⚠️ 已连接，但未收到她的数据。她打开学习页面了吗？');
     }
   }, 30000);
 }
 
 function send(msg) {
-  if (ws && wsConnected && ws.readyState === WebSocket.OPEN) {
-    try { ws.send(JSON.stringify(msg)); } catch(e) {}
+  if (!connected) return;
+  var Message = AV.Object.extend('Message');
+  var m = new Message();
+  m.set('room', room);
+  m.set('type', msg.type);
+  m.set('data', msg.data || msg);
+  m.set('sender', myRole);
+  m.set('timestamp', Date.now());
+  m.save().catch(function(err) {
+    console.error('LeanCloud save error:', err);
+  });
+}
+
+function handleIncoming(msg) {
+  switch (msg.type) {
+    case 'status':
+      lastStatus = msg.data;
+      updateDashboard(msg.data);
+      break;
+    case 'goal-complete':
+      addLog('✅ 完成了：' + msg.data.text);
+      if (msg.data.completed >= msg.data.total && msg.data.total > 0) {
+        addLog('🎉 今日目标全部完成！');
+      }
+      break;
+    case 'sos':
+      playSOSAlert();
+      $('#sosBanner').classList.add('active');
+      $('#sosCard').classList.add('alert');
+      addLog('🆘 她按下了 SOS 按钮，正在冷静中…');
+      break;
+    case 'sos-end':
+      $('#sosBanner').classList.remove('active');
+      $('#sosCard').classList.remove('alert');
+      addLog('💚 SOS 结束，她回到了学习中');
+      break;
+    case 'sos-cancel':
+      $('#sosBanner').classList.remove('active');
+      $('#sosCard').classList.remove('alert');
+      addLog('↩️ 她取消了 SOS');
+      break;
+    case 'timer':
+      updateTimerUI(msg.data);
+      break;
+    case 'timer-start':
+      addLog('▶️ 她开始了学习计时');
+      if (msg.data) updateTimerUI(msg.data);
+      break;
+    case 'timer-pause':
+      addLog('⏸ 她暂停了学习计时');
+      if (msg.data) updateTimerUI(msg.data);
+      break;
+    case 'timer-reset':
+      addLog('↺ 她重置了学习计时');
+      updateTimerUI({ status: 'idle', currentMs: 0, accumulatedMs: 0, sessionStart: null, sessionStartStr: null, sessions: [] });
+      break;
+    case 'history':
+      renderHistory(msg.data);
+      break;
   }
 }
 
@@ -825,16 +838,11 @@ function addLog(text) {
 
 // ---- Encourage ----
 function sendEncourage(msg) {
-  if (!ws || !wsConnected) {
+  if (!connected) {
     addLog('⚠️ 未连接，无法发送');
     return;
   }
-  try {
-    send({ type: 'encourage', message: msg });
-  } catch(e) {
-    addLog('⚠️ 发送失败');
-    return;
-  }
+  send({ type: 'encourage', data: { message: msg } });
   var sent = $('#encSent');
   sent.style.display = '';
   setTimeout(function() { sent.style.display = 'none'; }, 2000);
@@ -846,10 +854,10 @@ function esc(s) {
 }
 
 // ---- Events ----
-$('#joinBtn').addEventListener('click', connect);
+$('#joinBtn').addEventListener('click', initAndConnect);
 
 $('#roomInput').addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') connect();
+  if (e.key === 'Enter') initAndConnect();
 });
 
 $('#encPresets').addEventListener('click', (e) => {
@@ -893,15 +901,15 @@ if (roomParam) {
   $('#roomInput').value = room;
   $('#meTag').style.display = '';
   // Auto-connect after a short delay for page to load
-  setTimeout(connect, 800);
+  setTimeout(initAndConnect, 800);
 }
 
 // Handle page visibility — reconnect when returning
 document.addEventListener('visibilitychange', function() {
-  if (!document.hidden && room && !wsConnected) {
-    console.log('Page visible, reconnecting WebSocket...');
+  if (!document.hidden && room && !connected) {
+    console.log('Page visible, reconnecting LeanCloud...');
     $('#connectingIndicator').classList.add('show');
-    connect();
+    initAndConnect();
   }
 });
 })();
