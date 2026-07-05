@@ -211,13 +211,13 @@ if (roomParam) {
 function goStudent() {
   var code = roomInput.value.trim().toUpperCase();
   if (validateRoom(code)) return;
-  window.location.href = '/student.html?room=' + encodeURIComponent(code);
+  window.location.href = 'student.html?room=' + encodeURIComponent(code);
 }
 
 function goSupervisor() {
   var code = roomInput.value.trim().toUpperCase();
   if (validateRoom(code)) return;
-  window.location.href = '/supervisor.html?room=' + encodeURIComponent(code);
+  window.location.href = 'supervisor.html?room=' + encodeURIComponent(code);
 }
 
 btnStudent.addEventListener('click', goStudent);
